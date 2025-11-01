@@ -35,7 +35,7 @@ export function useRecommendations() {
     try {
       const { data, error } = await supabase
         .from('recommendations')
-        .insert(recommendation as any)
+        .insert(recommendation)
         .select()
         .single()
 
@@ -51,7 +51,7 @@ export function useRecommendations() {
     try {
       const { data, error } = await supabase
         .from('recommendations')
-        .update(updates as any)
+        .update(updates)
         .eq('id', id)
         .select()
         .single()
@@ -81,7 +81,7 @@ export function useRecommendations() {
 
   const publishRecommendation = async (id: string) => {
     try {
-      const { data, error } = await supabase.rpc('publish_recommendation', { rec_id: id } as any)
+      const { data, error } = await supabase.rpc('publish_recommendation', { rec_id: id })
       if (error) throw error
       await fetchRecommendations()
       return { data, error: null }

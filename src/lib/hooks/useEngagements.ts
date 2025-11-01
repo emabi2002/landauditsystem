@@ -35,7 +35,7 @@ export function useEngagements() {
     try {
       const { data, error } = await supabase
         .from('engagements')
-        .insert(engagement as any)
+        .insert(engagement)
         .select()
         .single()
 
@@ -51,7 +51,7 @@ export function useEngagements() {
     try {
       const { data, error } = await supabase
         .from('engagements')
-        .update(updates as any)
+        .update(updates)
         .eq('id', id)
         .select()
         .single()

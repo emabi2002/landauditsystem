@@ -34,6 +34,9 @@ import {
 import { useEngagements } from '@/lib/hooks/useEngagements'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
+import type { Database } from '@/lib/database.types'
+
+type Engagement = Database['public']['Tables']['engagements']['Row']
 
 const statusColors = {
   Planning: 'bg-blue-100 text-blue-700',
@@ -49,7 +52,7 @@ export default function EngagementsPage() {
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isViewOpen, setIsViewOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
-  const [selectedEngagement, setSelectedEngagement] = useState<any>(null)
+  const [selectedEngagement, setSelectedEngagement] = useState<Engagement | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -124,7 +127,7 @@ export default function EngagementsPage() {
     setSubmitting(false)
   }
 
-  const openEdit = (engagement: any) => {
+  const openEdit = (engagement: Engagement) => {
     setSelectedEngagement(engagement)
     setFormData({
       title: engagement.title,
@@ -137,12 +140,12 @@ export default function EngagementsPage() {
     setIsEditOpen(true)
   }
 
-  const openView = (engagement: any) => {
+  const openView = (engagement: Engagement) => {
     setSelectedEngagement(engagement)
     setIsViewOpen(true)
   }
 
-  const openDelete = (engagement: any) => {
+  const openDelete = (engagement: Engagement) => {
     setSelectedEngagement(engagement)
     setIsDeleteOpen(true)
   }
@@ -210,7 +213,7 @@ export default function EngagementsPage() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-slate-700">Status</label>
-                  <Select value={formData.status} onValueChange={(value: any) => setFormData({ ...formData, status: value })}>
+                  <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value as typeof formData.status })}>
                     <SelectTrigger className="mt-1">
                       <SelectValue />
                     </SelectTrigger>
@@ -428,7 +431,7 @@ export default function EngagementsPage() {
               </div>
               <div>
                 <label className="text-sm font-medium text-slate-700">Status</label>
-                <Select value={formData.status} onValueChange={(value: any) => setFormData({ ...formData, status: value })}>
+                <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value as typeof formData.status })}>
                   <SelectTrigger className="mt-1">
                     <SelectValue />
                   </SelectTrigger>

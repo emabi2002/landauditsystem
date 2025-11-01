@@ -35,7 +35,7 @@ export function useFindings() {
     try {
       const { data, error } = await supabase
         .from('findings')
-        .insert(finding as any)
+        .insert(finding)
         .select()
         .single()
 
@@ -51,7 +51,7 @@ export function useFindings() {
     try {
       const { data, error } = await supabase
         .from('findings')
-        .update(updates as any)
+        .update(updates)
         .eq('id', id)
         .select()
         .single()
