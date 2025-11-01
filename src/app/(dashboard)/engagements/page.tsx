@@ -57,13 +57,20 @@ export default function EngagementsPage() {
   const [submitting, setSubmitting] = useState(false)
 
   // Form state
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    title: string
+    scope: string
+    objectives: string
+    start_date: string
+    end_date: string
+    status: 'Planning' | 'Fieldwork' | 'Reporting' | 'Follow-up' | 'Closed'
+  }>({
     title: '',
     scope: '',
     objectives: '',
     start_date: '',
     end_date: '',
-    status: 'Planning' as const,
+    status: 'Planning',
   })
 
   const resetForm = () => {

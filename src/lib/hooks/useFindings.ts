@@ -33,9 +33,10 @@ export function useFindings() {
 
   const createFinding = async (finding: FindingInsert) => {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await supabase
         .from('findings')
-        .insert(finding)
+        .insert(finding as any)
         .select()
         .single()
 
@@ -49,9 +50,10 @@ export function useFindings() {
 
   const updateFinding = async (id: string, updates: Partial<Finding>) => {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await supabase
         .from('findings')
-        .update(updates)
+        .update(updates as any)
         .eq('id', id)
         .select()
         .single()

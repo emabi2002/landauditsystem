@@ -33,9 +33,10 @@ export function useRecommendations() {
 
   const createRecommendation = async (recommendation: RecommendationInsert) => {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await supabase
         .from('recommendations')
-        .insert(recommendation)
+        .insert(recommendation as any)
         .select()
         .single()
 
@@ -49,9 +50,10 @@ export function useRecommendations() {
 
   const updateRecommendation = async (id: string, updates: Partial<Recommendation>) => {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await supabase
         .from('recommendations')
-        .update(updates)
+        .update(updates as any)
         .eq('id', id)
         .select()
         .single()
@@ -81,7 +83,8 @@ export function useRecommendations() {
 
   const publishRecommendation = async (id: string) => {
     try {
-      const { data, error } = await supabase.rpc('publish_recommendation', { rec_id: id })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await supabase.rpc('publish_recommendation', { rec_id: id } as any)
       if (error) throw error
       await fetchRecommendations()
       return { data, error: null }
