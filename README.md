@@ -62,18 +62,18 @@ See [RISK_GOVERNANCE_INTEGRATION.md](./RISK_GOVERNANCE_INTEGRATION.md) for detai
 
 ### 1. Clone the Repository
 
-\`\`\`bash
+```bash
 git clone <repository-url>
 cd dlpp-audit-compliance
-\`\`\`
+```
 
 ### 2. Install Dependencies
 
-\`\`\`bash
+```bash
 bun install
 # or
 npm install
-\`\`\`
+```
 
 ### 3. Set Up Supabase
 
@@ -86,53 +86,53 @@ npm install
 #### Run Database Migrations
 
 1. Install Supabase CLI:
-   \`\`\`bash
+   ```bash
    npm install -g supabase
-   \`\`\`
+   ```
 
 2. Login to Supabase:
-   \`\`\`bash
+   ```bash
    supabase login
-   \`\`\`
+   ```
 
 3. Link your project:
-   \`\`\`bash
+   ```bash
    supabase link --project-ref YOUR_PROJECT_REF
-   \`\`\`
+   ```
 
 4. Apply migrations:
-   \`\`\`bash
+   ```bash
    supabase db push
-   \`\`\`
+   ```
 
    Or manually run the SQL files in this order:
-   - \`supabase/migrations/001_initial_schema.sql\`
-   - \`supabase/migrations/002_rls_policies.sql\`
+   - `supabase/migrations/001_initial_schema.sql`
+   - `supabase/migrations/002_rls_policies.sql`
 
 #### Create Storage Buckets
 
 In your Supabase dashboard:
 1. Go to Storage
 2. Create two buckets:
-   - \`compliance-evidence\` (private)
-   - \`compliance-reports\` (private)
+   - `compliance-evidence` (private)
+   - `compliance-reports` (private)
 
 ### 4. Configure Environment Variables
 
-Create a \`.env.local\` file:
+Create a `.env.local` file:
 
-\`\`\`env
+```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-\`\`\`
+```
 
 ### 5. Run Development Server
 
-\`\`\`bash
+```bash
 bun dev
 # or
 npm run dev
-\`\`\`
+```
 
 Open [http://localhost:3000](http://localhost:3000)
 
@@ -160,9 +160,9 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ### Functions
 
-- \`publish_recommendation(rec_id)\` - Transition recommendation to Published status
-- \`link_to_legal(rec_id, case_id)\` - Link recommendation to legal case
-- \`update_action_progress(plan_id, progress, note)\` - Update action plan progress
+- `publish_recommendation(rec_id)` - Transition recommendation to Published status
+- `link_to_legal(rec_id, case_id)` - Link recommendation to legal case
+- `update_action_progress(plan_id, progress, note)` - Update action plan progress
 
 ## User Roles & Permissions
 
@@ -179,27 +179,27 @@ The system provides a read-only API for the Legal CMS to consume published recom
 
 ### Endpoint
 
-\`\`\`
+```
 GET /rest/v1/published_recommendations_view
-\`\`\`
+```
 
 ### Query Parameters
 
-- \`status=eq.Published\` - Filter by status
-- \`priority=eq.Critical\` - Filter by priority
-- \`region_code=eq.REG-001\` - Filter by region
-- \`limit=100\` - Pagination limit
-- \`offset=0\` - Pagination offset
+- `status=eq.Published` - Filter by status
+- `priority=eq.Critical` - Filter by priority
+- `region_code=eq.REG-001` - Filter by region
+- `limit=100` - Pagination limit
+- `offset=0` - Pagination offset
 
 ### Authentication
 
 All requests require Supabase API key:
 
-\`\`\`bash
-curl -X GET 'https://your-project.supabase.co/rest/v1/published_recommendations_view' \\
-  -H 'apikey: YOUR_SUPABASE_ANON_KEY' \\
+```bash
+curl -X GET 'https://your-project.supabase.co/rest/v1/published_recommendations_view' \
+  -H 'apikey: YOUR_SUPABASE_ANON_KEY' \
   -H 'Authorization: Bearer YOUR_SUPABASE_ANON_KEY'
-\`\`\`
+```
 
 Full API documentation available at: [/api-docs](/api-docs)
 
@@ -209,16 +209,16 @@ Full API documentation available at: [/api-docs](/api-docs)
 
 1. Connect your repository to Netlify
 2. Configure build settings:
-   - Build command: \`npm run build\`
-   - Publish directory: \`.next\`
+   - Build command: `npm run build`
+   - Publish directory: `.next`
 3. Add environment variables in Netlify dashboard
 4. Deploy
 
 ### Deploy to Vercel
 
-\`\`\`bash
+```bash
 vercel
-\`\`\`
+```
 
 Or connect via Vercel dashboard.
 
@@ -234,7 +234,7 @@ Or connect via Vercel dashboard.
 
 ### Project Structure
 
-\`\`\`
+```
 dlpp-audit-compliance/
 ├── src/
 │   ├── app/
@@ -258,7 +258,7 @@ dlpp-audit-compliance/
 ├── supabase/
 │   └── migrations/             # SQL migrations
 └── public/                     # Static assets
-\`\`\`
+```
 
 ### Code Style
 

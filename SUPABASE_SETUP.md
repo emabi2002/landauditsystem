@@ -88,28 +88,10 @@ supabase db push
 -- Insert people records for your users
 INSERT INTO people (user_id, full_name, email, role, org_unit_id, active)
 VALUES
-  ('USER_ID_FROM_AUTH', 'Admin User', 'admin@dlpp.org', 'Audit Admin', (SELECT id FROM org_units WHERE code = 'CORP'), true),
-  ('USER_ID_FROM_AUTH_2', 'Manager User', 'manager@dlpp.org', 'Audit Manager', (SELECT id FROM org_units WHERE code = 'CORP'), true);
+  ('USER_ID_FROM_AUTH', 'Admin User', 'admin@dlpp.org', 'Audit Admin', (SELECT id FROM org_units WHERE code = 'CORP'), true);
 ```
 
 Replace `USER_ID_FROM_AUTH` with the actual UUID from the auth.users table.
-
-## Step 8: Test the Connection
-
-1. Restart your dev server:
-   ```bash
-   bun run dev
-   ```
-2. Open http://localhost:3000
-3. Check browser console for any connection errors
-4. Try creating a test engagement or finding
-
-## Step 9: Verify RLS Policies
-
-1. Go to "Authentication" and sign in as one of your test users
-2. Try accessing different pages
-3. Verify you can only see data you should have access to
-4. Test creating, editing, and deleting records
 
 ## Troubleshooting
 
@@ -122,27 +104,3 @@ Replace `USER_ID_FROM_AUTH` with the actual UUID from the auth.users table.
 - Make sure you're signed in
 - Check that your user has a corresponding record in the `people` table
 - Verify RLS policies are enabled on all tables
-
-### Connection timeout
-- Check your internet connection
-- Verify the Supabase project URL is correct
-- Try accessing the Supabase dashboard directly
-
-## Next Steps
-
-After successful setup:
-1. ✅ Populate reference data (org units, obligations, controls)
-2. ✅ Create more users and assign roles
-3. ✅ Test all CRUD operations
-4. ✅ Set up email notifications (optional)
-5. ✅ Configure storage policies for file uploads
-6. ✅ Deploy to production
-
-## Production Deployment
-
-When deploying to production:
-1. Create a new Supabase project for production (don't use the same one!)
-2. Run migrations on production database
-3. Update environment variables in your deployment platform (Netlify/Vercel)
-4. Add production URL to Supabase Authentication > URL Configuration
-5. Enable RLS policies and test thoroughly before going live
