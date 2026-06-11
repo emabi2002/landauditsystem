@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* DLPP Brand Colors */
+  --dlpp-purple: #4A4284;
+  --dlpp-purple-dark: #3A3468;
+  --dlpp-purple-light: #5A5294;
+  --dlpp-red: #EF5A5A;
+  --dlpp-red-dark: #D94A4A;
+  --dlpp-gold: #D4A574;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

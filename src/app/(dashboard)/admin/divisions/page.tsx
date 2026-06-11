@@ -36,7 +36,7 @@ import {
   MapPin,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClientComponentClient } from '@/lib/supabase'
 import type { Database } from '@/lib/database.types'
 
 interface Division {

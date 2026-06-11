@@ -31,7 +31,7 @@ import {
   Wand2,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClientComponentClient } from '@/lib/supabase'
 import type { Database } from '@/lib/database.types'
 import { MODULE_CATEGORIES } from '@/lib/rbac-types'
 import type { Module } from '@/lib/rbac-types'

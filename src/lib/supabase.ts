@@ -1,10 +1,30 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { createClientComponentClient as _createAuthHelpersClient } from '@supabase/auth-helpers-nextjs'
 import type { Database } from './database.types'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://your-project.supabase.co'
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key'
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
+
+/**
+ * Correctly-typed drop-in replacement for the auth-helpers
+ * `createClientComponentClient<Database>()`.
+ *
+ * Why this exists: `@supabase/auth-helpers-nextjs@0.10.0` is built against an
+ * older `@supabase/supabase-js` generic signature than the installed v2.87.1.
+ * That mismatch causes the `Database` generic to land in the wrong slot, so
+ * `.insert()` / `.update()` value parameters collapse to `never`.
+ *
+ * This shim keeps the auth-helpers runtime client (so cookie-based sessions
+ * continue to work with the middleware) while presenting it to TypeScript as a
+ * properly typed `SupabaseClient<Database>` from the installed supabase-js.
+ */
+export function createClientComponentClient<
+  _DB = Database,
+>(): SupabaseClient<Database> {
+  return _createAuthHelpersClient() as unknown as SupabaseClient<Database>
+}
 
 // Helper to get current authenticated user
 export async function getCurrentUser() {

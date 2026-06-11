@@ -32,7 +32,7 @@ import {
   Cell,
 } from 'recharts'
 import Link from 'next/link'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClientComponentClient } from '@/lib/supabase'
 import type { Database } from '@/lib/database.types'
 
 interface KPIData {
@@ -122,11 +122,10 @@ export default function DashboardPage() {
           .from('audit_findings')
           .select(`
             id,
-            finding_number,
-            finding_title,
+            title,
             risk_rating,
             created_at,
-            audit_engagements(engagement_title)
+            audit_engagements(title)
           `)
           .order('created_at', { ascending: false })
           .limit(5),
@@ -217,13 +216,13 @@ export default function DashboardPage() {
       // Set recent findings
       setRecentFindings(
         (recentFindingsRes.data as any[] || []).map((f: any) => ({
-          id: f.finding_number || f.id,
-          finding_number: f.finding_number || `FND-${f.id?.substring(0, 8)}`,
-          finding_title: f.finding_title,
+          id: f.id,
+          finding_number: `FND-${f.id?.substring(0, 8)}`,
+          finding_title: f.title,
           risk_rating: f.risk_rating,
           created_at: f.created_at,
           engagement: f.audit_engagements
-            ? { engagement_title: f.audit_engagements.engagement_title }
+            ? { engagement_title: f.audit_engagements.title }
             : null,
         }))
       )

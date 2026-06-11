@@ -35,7 +35,7 @@ import { useEngagements } from '@/lib/hooks/useEngagements'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import type { Database } from '@/lib/database.types'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClientComponentClient } from '@/lib/supabase'
 import Link from 'next/link'
 
 type Engagement = Database['public']['Tables']['audit_engagements']['Row']
@@ -220,9 +220,9 @@ export default function EngagementsPage() {
       title: engagement.title,
       scope: engagement.scope || '',
       objectives: engagement.objectives || '',
-      start_date: engagement.start_date,
+      start_date: engagement.start_date || '',
       end_date: engagement.end_date || '',
-      status: engagement.status,
+      status: engagement.status as typeof formData.status,
       risk_event_id: (engagement as any).risk_event_id || '',
     })
     setIsEditOpen(true)

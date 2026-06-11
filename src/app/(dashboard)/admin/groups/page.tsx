@@ -30,7 +30,7 @@ import {
   CheckCircle2,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClientComponentClient } from '@/lib/supabase'
 import type { Database } from '@/lib/database.types'
 import { DEFAULT_GROUP_TEMPLATES, MODULE_CATEGORIES } from '@/lib/rbac-types'
 import type { Group, Module, GroupModulePermission, PermissionMatrixRow } from '@/lib/rbac-types'

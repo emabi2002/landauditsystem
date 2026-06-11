@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClientComponentClient } from '@/lib/supabase'
 import type { Database, RiskCategory, RiskRating, RiskStatus } from '../database.types'
 
 type RiskRegister = Database['public']['Tables']['audit_risk_register']['Row']
@@ -131,7 +131,7 @@ export function useRiskRegister() {
 
       if (fetchError) throw fetchError
 
-      const riskList = (data || []) as RiskWithRelations[]
+      const riskList = (data || []) as unknown as RiskWithRelations[]
       setRisks(riskList)
       setStats(calculateStats(riskList))
 

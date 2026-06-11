@@ -182,7 +182,7 @@ export default function RiskProfilesPage() {
                     </TableCell>
                     <TableCell>{profile.project_name || '-'}</TableCell>
                     <TableCell>
-                      {new Date(profile.profile_date).toLocaleDateString()}
+                      {profile.profile_date ? new Date(profile.profile_date).toLocaleDateString() : '-'}
                     </TableCell>
                     <TableCell>
                       {profile.overall_level ? (

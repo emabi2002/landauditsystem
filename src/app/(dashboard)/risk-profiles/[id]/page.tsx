@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { exportToCSV } from '@/lib/utils/export'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClientComponentClient } from '@/lib/supabase'
 import type { Database } from '@/lib/database.types'
 import { AddRiskItemDialog } from '@/components/dialogs/AddRiskItemDialog'
 import { toast } from 'sonner'
@@ -56,7 +56,7 @@ export default function RiskProfileDetailPage() {
           prepared_by_person:people!audit_risk_profiles_prepared_by_fkey(full_name),
           reviewed_by_person:people!audit_risk_profiles_reviewed_by_fkey(full_name)
         `)
-        .eq('id', params.id)
+        .eq('id', String(params.id))
         .single()
 
       if (profileError) throw profileError
@@ -69,7 +69,7 @@ export default function RiskProfileDetailPage() {
           *,
           risk_owner_person:people!audit_risk_profile_items_risk_owner_id_fkey(full_name)
         `)
-        .eq('risk_profile_id', params.id)
+        .eq('risk_profile_id', String(params.id))
         .order('created_at')
 
       if (itemsError) throw itemsError

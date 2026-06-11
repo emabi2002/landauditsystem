@@ -1,73 +1,102 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard,
-  FileText,
-  ClipboardList,
-  AlertTriangle,
-  CheckCircle,
   Shield,
-  BarChart3,
-  Settings,
-  Search,
+  Zap,
   Briefcase,
   FolderOpen,
+  AlertTriangle,
+  CheckCircle,
+  ClipboardList,
   Activity,
   TrendingUp,
   Target,
-  Zap,
-  X,
+  FileText,
+  BarChart3,
+  Settings,
   Users,
   Package,
   Building2,
   UserCircle,
+  ChevronDown,
+  ChevronRight,
+  ShieldCheck,
+  Scale,
+  GitBranch,
 } from 'lucide-react'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
 
-interface SidebarProps {
-  onClose?: () => void
+interface NavItem {
+  name: string
+  href: string
+  icon: React.ComponentType<{ className?: string }>
+  badge?: string
 }
 
-const navigation = [
+interface NavGroup {
+  name: string
+  icon: React.ComponentType<{ className?: string }>
+  items: NavItem[]
+  defaultOpen?: boolean
+}
+
+const navigationGroups: NavGroup[] = [
   {
-    section: 'Core',
+    name: 'Dashboard',
+    icon: LayoutDashboard,
+    defaultOpen: true,
     items: [
-      { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-      { name: 'Risk Register', href: '/risk-register', icon: Shield, highlight: true },
-      { name: 'Risk Events', href: '/risk-events', icon: Zap, highlight: true },
-    ]
+      { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
+    ],
   },
   {
-    section: 'Audit Workflow',
+    name: 'Risk Foundation',
+    icon: Shield,
+    defaultOpen: true,
+    items: [
+      { name: 'Risk Register', href: '/risk-register', icon: Shield, badge: 'CORE' },
+      { name: 'Risk Events', href: '/risk-events', icon: Zap, badge: 'GATE' },
+      { name: 'Risk Profiles', href: '/risk-profiles', icon: Activity },
+    ],
+  },
+  {
+    name: 'Audit Workflow',
+    icon: Scale,
+    defaultOpen: true,
     items: [
       { name: 'Engagements', href: '/engagements', icon: Briefcase },
       { name: 'Fieldwork', href: '/fieldwork', icon: FolderOpen },
       { name: 'Findings', href: '/findings', icon: AlertTriangle },
       { name: 'Recommendations', href: '/recommendations', icon: CheckCircle },
       { name: 'Action Plans', href: '/action-plans', icon: ClipboardList },
-    ]
+    ],
   },
   {
-    section: 'Risk & Governance',
+    name: 'Governance',
+    icon: GitBranch,
+    defaultOpen: false,
     items: [
-      { name: 'Risk Profiles', href: '/risk-profiles', icon: Activity },
       { name: 'PSAP Scorecard', href: '/psap-scorecard', icon: TrendingUp },
       { name: 'KRA & Workplan', href: '/kra-workplan', icon: Target },
-    ]
-  },
-  {
-    section: 'Management',
-    items: [
       { name: 'Compliance', href: '/compliance', icon: FileText },
-      { name: 'Reports', href: '/reports', icon: BarChart3 },
-    ]
+    ],
   },
   {
-    section: 'Administration',
+    name: 'Reports',
+    icon: BarChart3,
+    defaultOpen: false,
+    items: [
+      { name: 'Reports', href: '/reports', icon: BarChart3 },
+    ],
+  },
+  {
+    name: 'Administration',
+    icon: Settings,
+    defaultOpen: false,
     items: [
       { name: 'Admin Hub', href: '/admin', icon: Settings },
       { name: 'Users', href: '/admin/users', icon: Users },
@@ -75,104 +104,195 @@ const navigation = [
       { name: 'Groups', href: '/admin/groups', icon: Shield },
       { name: 'Modules', href: '/admin/modules', icon: Package },
       { name: 'Divisions', href: '/admin/divisions', icon: Building2 },
-    ]
-  }
+    ],
+  },
 ]
 
-export function Sidebar({ onClose }: SidebarProps) {
+interface SidebarProps {
+  collapsed?: boolean
+  onToggle?: () => void
+  mobileOpen?: boolean
+  onMobileClose?: () => void
+}
+
+export function Sidebar({
+  collapsed = false,
+  mobileOpen = false,
+  onMobileClose,
+}: SidebarProps) {
   const pathname = usePathname()
 
-  const handleLinkClick = () => {
-    if (onClose) {
-      onClose()
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {}
+    navigationGroups.forEach((group) => {
+      initial[group.name] = group.defaultOpen ?? false
+    })
+    return initial
+  })
+
+  const toggleGroup = (groupName: string) => {
+    setOpenGroups((prev) => ({
+      ...prev,
+      [groupName]: !prev[groupName],
+    }))
+  }
+
+  const isActiveItem = (href: string) => {
+    if (href === '/dashboard') {
+      return pathname === '/dashboard'
     }
+    if (href.includes('?')) {
+      const basePath = href.split('?')[0]
+      return pathname === basePath
+    }
+    // Exact match for admin sub-pages to avoid /admin matching /admin/users
+    if (href === '/admin') {
+      return pathname === '/admin'
+    }
+    return pathname === href || pathname?.startsWith(href + '/')
+  }
+
+  const isActiveGroup = (group: NavGroup) => {
+    return group.items.some((item) => isActiveItem(item.href))
   }
 
   return (
-    <div className="flex h-full w-64 flex-col border-r bg-slate-50">
-      {/* Logo */}
-      <div className="flex h-14 md:h-16 items-center justify-between border-b px-4 md:px-6">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-slate-700 to-slate-900 text-white font-bold text-sm">
-            IA
-          </div>
-          <div>
-            <h1 className="text-sm font-bold text-slate-900">DLPP Audit</h1>
-            <p className="text-xs text-slate-500">Compliance System</p>
-          </div>
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="lg:hidden h-8 w-8"
-          onClick={onClose}
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
+    <>
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+          onClick={onMobileClose}
+        />
+      )}
 
-      {/* Search */}
-      <div className="p-3 md:p-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <Input
-            type="search"
-            placeholder="Search..."
-            className="pl-9 bg-white border-slate-200 h-9 text-sm"
+      <aside
+        className={cn(
+          'fixed left-0 top-0 z-40 h-screen bg-slate-900 text-white transition-all duration-300',
+          collapsed ? 'w-16' : 'w-64',
+          'lg:translate-x-0',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        )}
+      >
+        {/* Logo Header */}
+        <div className="flex h-16 items-center justify-center border-b border-slate-700 px-4">
+          <img
+            src="/dlpp-logo.svg"
+            alt="DLPP Logo"
+            className={cn('transition-all duration-300', collapsed ? 'h-8' : 'h-10')}
           />
+          {!collapsed && (
+            <div className="ml-3">
+              <div className="text-sm font-semibold">DLPP Audit</div>
+              <div className="text-xs text-slate-400">Compliance System</div>
+            </div>
+          )}
         </div>
-      </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 space-y-3 md:space-y-4 px-2 md:px-3 py-2 overflow-y-auto">
-        {navigation.map((section, sectionIdx) => (
-          <div key={sectionIdx} className="space-y-1">
-            <h3 className="px-3 text-[10px] md:text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              {section.section}
-            </h3>
-            <div className="space-y-0.5 md:space-y-1">
-              {section.items.map((item: any) => {
-                const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`)
-                const isHighlight = item.highlight
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    onClick={handleLinkClick}
+        {/* Navigation */}
+        <nav className="h-[calc(100vh-4rem)] overflow-y-auto py-4 px-2">
+          <div className="space-y-1">
+            {navigationGroups.map((group) => {
+              const GroupIcon = group.icon
+              const isOpen = openGroups[group.name]
+              const isGroupActive = isActiveGroup(group)
+
+              return (
+                <div key={group.name} className="mb-2">
+                  <button
+                    onClick={() => toggleGroup(group.name)}
                     className={cn(
-                      'group flex items-center gap-2 md:gap-3 rounded-lg px-3 py-2 md:py-2.5 text-sm font-medium transition-all',
-                      isActive
-                        ? 'bg-slate-900 text-white shadow-sm'
-                        : isHighlight
-                        ? 'text-red-700 bg-red-50 hover:bg-red-100 border border-red-200'
-                        : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                      'flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                      'hover:bg-slate-800',
+                      isGroupActive ? 'bg-slate-800 text-emerald-400' : 'text-slate-300'
                     )}
                   >
-                    <item.icon
-                      className={cn(
-                        'h-4 w-4 md:h-5 md:w-5 transition-colors flex-shrink-0',
-                        isActive ? 'text-white' : isHighlight ? 'text-red-600' : 'text-slate-500 group-hover:text-slate-700'
-                      )}
-                    />
-                    <span className="truncate">{item.name}</span>
-                    {isHighlight && !isActive && (
-                      <span className="ml-auto text-[10px] md:text-xs bg-red-600 text-white px-1 md:px-1.5 py-0.5 rounded flex-shrink-0">CORE</span>
-                    )}
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
-        ))}
-      </nav>
+                    <div className="flex items-center gap-3">
+                      <GroupIcon className="h-5 w-5 flex-shrink-0" />
+                      {!collapsed && <span>{group.name}</span>}
+                    </div>
+                    {!collapsed &&
+                      (isOpen ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      ))}
+                  </button>
 
-      {/* Footer */}
-      <div className="border-t p-3 md:p-4">
-        <div className="text-xs text-slate-500">
-          <p className="font-medium">DLPP Internal Audit</p>
-          <p className="mt-1">Version 1.0.0</p>
-        </div>
-      </div>
-    </div>
+                  {/* Expanded nested items */}
+                  {!collapsed && isOpen && (
+                    <div className="mt-1 ml-4 space-y-1 border-l border-slate-700 pl-4">
+                      {group.items.map((item) => {
+                        const ItemIcon = item.icon
+                        const isActive = isActiveItem(item.href)
+
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={onMobileClose}
+                            className={cn(
+                              'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+                              'hover:bg-slate-800',
+                              isActive
+                                ? 'bg-emerald-600 text-white font-medium'
+                                : 'text-slate-400 hover:text-white'
+                            )}
+                          >
+                            <ItemIcon className="h-4 w-4 flex-shrink-0" />
+                            <span className="truncate">{item.name}</span>
+                            {item.badge && (
+                              <span
+                                className={cn(
+                                  'ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold',
+                                  item.badge === 'CORE'
+                                    ? 'bg-emerald-500 text-white'
+                                    : item.badge === 'GATE'
+                                    ? 'bg-amber-500 text-white'
+                                    : 'bg-red-500 text-white'
+                                )}
+                              >
+                                {item.badge}
+                              </span>
+                            )}
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  )}
+
+                  {/* Collapsed icons only */}
+                  {collapsed && (
+                    <div className="mt-1 space-y-1">
+                      {group.items.map((item) => {
+                        const ItemIcon = item.icon
+                        const isActive = isActiveItem(item.href)
+
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            title={item.name}
+                            onClick={onMobileClose}
+                            className={cn(
+                              'flex items-center justify-center rounded-lg p-2 transition-colors',
+                              'hover:bg-slate-800',
+                              isActive
+                                ? 'bg-emerald-600 text-white'
+                                : 'text-slate-400 hover:text-white'
+                            )}
+                          >
+                            <ItemIcon className="h-4 w-4" />
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </nav>
+      </aside>
+    </>
   )
 }

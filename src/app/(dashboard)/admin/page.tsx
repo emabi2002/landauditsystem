@@ -21,7 +21,7 @@ import {
   AlertTriangle,
   UserCircle,
 } from 'lucide-react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClientComponentClient } from '@/lib/supabase'
 import type { Database as DbTypes } from '@/lib/database.types'
 
 interface AdminStats {
