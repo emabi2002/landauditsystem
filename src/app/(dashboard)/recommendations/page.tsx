@@ -12,7 +12,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
-import { Search, Filter, Eye, Edit, CheckCircle, Send } from 'lucide-react'
+import { Search, Filter, Eye, Edit, CheckCircle, Send, Lightbulb } from 'lucide-react'
+import { PageHeader, PageContainer } from '@/components/layout/PageHeader'
 import {
   Select,
   SelectContent,
@@ -83,25 +84,22 @@ const statusColors = {
 
 export default function RecommendationsPage() {
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Recommendations</h1>
-          <p className="text-slate-500 mt-1">
-            Track and publish audit recommendations for action
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline">
+    <>
+      <PageHeader
+        icon={Lightbulb}
+        title="Recommendations"
+        subtitle="Track and publish audit recommendations for action"
+        actions={
+          <Button variant="outline" size="sm">
             <Send className="mr-2 h-4 w-4" />
             Publish Selected
           </Button>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid gap-6 md:grid-cols-4">
+        }
+      />
+      <PageContainer>
+        <div className="space-y-6">
+          {/* Stats Cards */}
+          <div className="grid gap-6 md:grid-cols-4">
         <Card className="p-4 bg-white border-slate-200">
           <div className="flex items-center justify-between">
             <div>
@@ -249,6 +247,8 @@ export default function RecommendationsPage() {
           </TableBody>
         </Table>
       </Card>
-    </div>
+        </div>
+      </PageContainer>
+    </>
   )
 }

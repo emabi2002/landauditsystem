@@ -39,6 +39,7 @@ import {
   CheckCircle2,
   XCircle,
 } from 'lucide-react'
+import { PageHeader, PageContainer } from '@/components/layout/PageHeader'
 import { toast } from 'sonner'
 import { createClientComponentClient } from '@/lib/supabase'
 import type { Database } from '@/lib/database.types'
@@ -445,34 +446,30 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/admin">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">User Management</h1>
-            <p className="text-slate-500 mt-1">Manage users and their group assignments</p>
-          </div>
-        </div>
-        <Button
-          onClick={() => {
-            resetForm()
-            setCreateDialogOpen(true)
-          }}
-          className="gap-2 bg-emerald-600 hover:bg-emerald-700"
-        >
-          <UserPlus className="h-5 w-5" />
-          Create New User
-        </Button>
-      </div>
-
-      {/* Search & Filters */}
-      <Card>
+    <>
+      <PageHeader
+        icon={Users}
+        title="User Management"
+        subtitle="Manage users and their group assignments"
+        backHref="/admin"
+        actions={
+          <Button
+            size="sm"
+            onClick={() => {
+              resetForm()
+              setCreateDialogOpen(true)
+            }}
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+          >
+            <UserPlus className="h-4 w-4" />
+            Create New User
+          </Button>
+        }
+      />
+      <PageContainer>
+        <div className="space-y-6">
+          {/* Search & Filters */}
+          <Card>
         <CardContent className="p-4">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
@@ -873,6 +870,8 @@ export default function UsersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+        </div>
+      </PageContainer>
+    </>
   )
 }

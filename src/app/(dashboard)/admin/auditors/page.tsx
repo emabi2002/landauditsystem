@@ -58,6 +58,7 @@ import {
   FileText,
   TrendingUp,
 } from 'lucide-react'
+import { PageHeader, PageContainer } from '@/components/layout/PageHeader'
 import { toast } from 'sonner'
 import { createClientComponentClient } from '@/lib/supabase'
 import type { Database } from '@/lib/database.types'
@@ -493,34 +494,30 @@ export default function AuditorProfilesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/admin">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">Auditor Profiles</h1>
-            <p className="text-slate-500 mt-1">Manage auditor qualifications, certifications, and assignments</p>
-          </div>
-        </div>
-        <Button
-          onClick={() => {
-            resetForm()
-            setCreateDialogOpen(true)
-          }}
-          className="gap-2 bg-teal-600 hover:bg-teal-700"
-        >
-          <Plus className="h-5 w-5" />
-          Add Auditor Profile
-        </Button>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+    <>
+      <PageHeader
+        icon={UserCircle}
+        title="Auditor Profiles"
+        subtitle="Manage auditor qualifications, certifications, and assignments"
+        backHref="/admin"
+        actions={
+          <Button
+            size="sm"
+            onClick={() => {
+              resetForm()
+              setCreateDialogOpen(true)
+            }}
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+          >
+            <Plus className="h-4 w-4" />
+            Add Auditor Profile
+          </Button>
+        }
+      />
+      <PageContainer>
+        <div className="space-y-6">
+          {/* Stats Cards */}
+          <div className="grid gap-4 md:grid-cols-4">
         <Card className="border-l-4 border-l-teal-500">
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
@@ -1284,6 +1281,8 @@ export default function AuditorProfilesPage() {
           )}
         </SheetContent>
       </Sheet>
-    </div>
+        </div>
+      </PageContainer>
+    </>
   )
 }

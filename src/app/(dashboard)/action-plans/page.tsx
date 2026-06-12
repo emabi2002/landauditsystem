@@ -12,7 +12,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
-import { Search, Filter, Eye, Upload, AlertCircle } from 'lucide-react'
+import { Search, Filter, Eye, Upload, AlertCircle, ClipboardCheck } from 'lucide-react'
+import { PageHeader, PageContainer } from '@/components/layout/PageHeader'
 import {
   Select,
   SelectContent,
@@ -87,19 +88,16 @@ const getProgressColor = (progress: number) => {
 
 export default function ActionPlansPage() {
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Action Plans</h1>
-          <p className="text-slate-500 mt-1">
-            Monitor and track implementation of audit recommendations
-          </p>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid gap-6 md:grid-cols-4">
+    <>
+      <PageHeader
+        icon={ClipboardCheck}
+        title="Action Plans"
+        subtitle="Monitor and track implementation of audit recommendations"
+      />
+      <PageContainer>
+        <div className="space-y-6">
+          {/* Stats Cards */}
+          <div className="grid gap-6 md:grid-cols-4">
         <Card className="p-4 bg-white border-slate-200">
           <div className="flex items-center justify-between">
             <div>
@@ -240,6 +238,8 @@ export default function ActionPlansPage() {
           </TableBody>
         </Table>
       </Card>
-    </div>
+        </div>
+      </PageContainer>
+    </>
   )
 }

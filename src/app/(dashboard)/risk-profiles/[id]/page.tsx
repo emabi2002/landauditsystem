@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, Download } from 'lucide-react'
+import { ArrowLeft, Plus, Download, Activity } from 'lucide-react'
+import { PageHeader, PageContainer } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { exportToCSV } from '@/lib/utils/export'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -121,17 +122,21 @@ export default function RiskProfileDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-slate-500">Loading risk profile...</p>
-      </div>
+      <PageContainer>
+        <div className="flex items-center justify-center h-64">
+          <p className="text-slate-500">Loading risk profile...</p>
+        </div>
+      </PageContainer>
     )
   }
 
   if (!profile) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-slate-500">Risk profile not found</p>
-      </div>
+      <PageContainer>
+        <div className="flex items-center justify-center h-64">
+          <p className="text-slate-500">Risk profile not found</p>
+        </div>
+      </PageContainer>
     )
   }
 
@@ -156,43 +161,34 @@ export default function RiskProfileDetailPage() {
   const stats = getRiskStats()
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push('/risk-profiles')}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Risk Profile</h1>
-            <p className="text-sm text-slate-500 mt-1">
-              {profile.org_units?.name} - {new Date(profile.profile_date).toLocaleDateString()}
-            </p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={handleExportRisks}
-            disabled={riskItems.length === 0}
-          >
-            <Download className="mr-2 h-4 w-4" />
-            Export CSV
-          </Button>
-          <Button onClick={() => setAddDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Risk Item
-          </Button>
-        </div>
-      </div>
-
-      {/* Profile Info */}
-      <Card>
+    <>
+      <PageHeader
+        icon={Activity}
+        title="Risk Profile"
+        subtitle={`${profile.org_units?.name} - ${new Date(profile.profile_date).toLocaleDateString()}`}
+        backHref="/risk-profiles"
+        actions={
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportRisks}
+              disabled={riskItems.length === 0}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Export CSV
+            </Button>
+            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setAddDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Risk Item
+            </Button>
+          </>
+        }
+      />
+      <PageContainer>
+        <div className="space-y-6">
+          {/* Profile Info */}
+          <Card>
         <CardHeader>
           <CardTitle>Profile Information</CardTitle>
         </CardHeader>
@@ -439,6 +435,8 @@ export default function RiskProfileDetailPage() {
         riskProfileId={params.id as string}
         onSuccess={loadProfile}
       />
-    </div>
+        </div>
+      </PageContainer>
+    </>
   )
 }

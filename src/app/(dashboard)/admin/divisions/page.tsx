@@ -35,6 +35,7 @@ import {
   FileText,
   MapPin,
 } from 'lucide-react'
+import { PageHeader, PageContainer } from '@/components/layout/PageHeader'
 import { toast } from 'sonner'
 import { createClientComponentClient } from '@/lib/supabase'
 import type { Database } from '@/lib/database.types'
@@ -310,34 +311,30 @@ export default function DivisionsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/admin">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">Division Management</h1>
-            <p className="text-slate-500 mt-1">Manage DLPP organizational divisions and sections</p>
-          </div>
-        </div>
-        <Button
-          onClick={() => {
-            resetDivisionForm()
-            setCreateDivisionOpen(true)
-          }}
-          className="gap-2 bg-amber-600 hover:bg-amber-700"
-        >
-          <Plus className="h-5 w-5" />
-          Add Division
-        </Button>
-      </div>
-
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
+    <>
+      <PageHeader
+        icon={Building2}
+        title="Division Management"
+        subtitle="Manage DLPP organizational divisions and sections"
+        backHref="/admin"
+        actions={
+          <Button
+            size="sm"
+            onClick={() => {
+              resetDivisionForm()
+              setCreateDivisionOpen(true)
+            }}
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+          >
+            <Plus className="h-4 w-4" />
+            Add Division
+          </Button>
+        }
+      />
+      <PageContainer>
+        <div className="space-y-6">
+          {/* Stats */}
+          <div className="grid gap-4 md:grid-cols-3">
         <Card className="border-l-4 border-l-amber-500">
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
@@ -713,6 +710,8 @@ export default function DivisionsPage() {
           </form>
         </DialogContent>
       </Dialog>
-    </div>
+        </div>
+      </PageContainer>
+    </>
   )
 }

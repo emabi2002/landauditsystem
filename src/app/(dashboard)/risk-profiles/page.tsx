@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Eye, Edit, Trash2, Calendar } from 'lucide-react'
+import { Plus, Eye, Edit, Trash2, Calendar, Activity } from 'lucide-react'
+import { PageHeader, PageContainer } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -62,23 +63,22 @@ export default function RiskProfilesPage() {
   const years = Array.from({ length: 5 }, (_, i) => currentYear - i)
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Risk Profiles</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Manage risk assessment matrices for organizational units and projects
-          </p>
-        </div>
-        <Button onClick={() => setCreateDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Risk Profile
-        </Button>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+    <>
+      <PageHeader
+        icon={Activity}
+        title="Risk Profiles"
+        subtitle="Manage risk assessment matrices for organizational units and projects"
+        actions={
+          <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setCreateDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Risk Profile
+          </Button>
+        }
+      />
+      <PageContainer>
+        <div className="space-y-6">
+          {/* Stats Cards */}
+          <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Profiles</CardTitle>
@@ -263,6 +263,8 @@ export default function RiskProfilesPage() {
         onOpenChange={setCreateDialogOpen}
         onSuccess={handleRiskProfileCreated}
       />
-    </div>
+        </div>
+      </PageContainer>
+    </>
   )
 }

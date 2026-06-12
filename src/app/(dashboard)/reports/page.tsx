@@ -3,6 +3,7 @@
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Download, FileText, BarChart3, TrendingUp, Calendar } from 'lucide-react'
+import { PageHeader, PageContainer } from '@/components/layout/PageHeader'
 
 const reportTemplates = [
   {
@@ -39,18 +40,16 @@ import { Briefcase } from 'lucide-react'
 
 export default function ReportsPage() {
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Reports</h1>
-          <p className="text-slate-500 mt-1">
-            Generate and export audit reports and analytics
-          </p>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="grid gap-6 md:grid-cols-3">
+    <>
+      <PageHeader
+        icon={BarChart3}
+        title="Reports"
+        subtitle="Generate and export audit reports and analytics"
+      />
+      <PageContainer>
+        <div className="space-y-6">
+          {/* Quick Actions */}
+          <div className="grid gap-6 md:grid-cols-3">
         <Card className="p-6 bg-white border-slate-200">
           <div className="flex items-center justify-between mb-4">
             <Calendar className="h-8 w-8 text-slate-600" />
@@ -121,6 +120,8 @@ export default function ReportsPage() {
           ))}
         </div>
       </div>
-    </div>
+        </div>
+      </PageContainer>
+    </>
   )
 }

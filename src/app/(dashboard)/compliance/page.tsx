@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
 import { Plus, Search, Shield } from 'lucide-react'
+import { PageHeader, PageContainer } from '@/components/layout/PageHeader'
 
 const obligations = [
   {
@@ -46,25 +47,22 @@ const obligations = [
 
 export default function CompliancePage() {
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">
-            Compliance Obligations
-          </h1>
-          <p className="text-slate-500 mt-1">
-            Manage legal and regulatory compliance requirements
-          </p>
-        </div>
-        <Button className="bg-slate-900 hover:bg-slate-800">
-          <Plus className="mr-2 h-4 w-4" />
-          New Obligation
-        </Button>
-      </div>
-
-      {/* Stats */}
-      <div className="grid gap-6 md:grid-cols-4">
+    <>
+      <PageHeader
+        icon={Shield}
+        title="Compliance Obligations"
+        subtitle="Manage legal and regulatory compliance requirements"
+        actions={
+          <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700">
+            <Plus className="mr-2 h-4 w-4" />
+            New Obligation
+          </Button>
+        }
+      />
+      <PageContainer>
+        <div className="space-y-6">
+          {/* Stats */}
+          <div className="grid gap-6 md:grid-cols-4">
         <Card className="p-4 bg-white border-slate-200">
           <div className="flex items-center justify-between">
             <div>
@@ -147,6 +145,8 @@ export default function CompliancePage() {
           </TableBody>
         </Table>
       </Card>
-    </div>
+        </div>
+      </PageContainer>
+    </>
   )
 }

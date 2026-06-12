@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, TrendingUp, Calendar, Award, Download } from 'lucide-react'
+import { PageHeader, PageContainer } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -106,23 +107,22 @@ export default function PSAPScorecardPage() {
     : 0
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">PSAP Financial & Governance Scorecard</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            20 PSAP standards quarterly assessment and compliance tracking
-          </p>
-        </div>
-        <Button onClick={() => setCreateDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Assessment
-        </Button>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+    <>
+      <PageHeader
+        icon={Award}
+        title="PSAP Financial & Governance Scorecard"
+        subtitle="20 PSAP standards quarterly assessment and compliance tracking"
+        actions={
+          <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setCreateDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Assessment
+          </Button>
+        }
+      />
+      <PageContainer>
+        <div className="space-y-6">
+          {/* Stats Cards */}
+          <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Assessments</CardTitle>
@@ -363,6 +363,8 @@ export default function PSAPScorecardPage() {
         onOpenChange={setCreateDialogOpen}
         onSuccess={handleAssessmentCreated}
       />
-    </div>
+        </div>
+      </PageContainer>
+    </>
   )
 }

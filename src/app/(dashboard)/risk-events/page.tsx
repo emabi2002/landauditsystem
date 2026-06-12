@@ -39,6 +39,7 @@ import {
   FileWarning,
   ArrowUpRight,
 } from 'lucide-react'
+import { PageHeader, PageContainer } from '@/components/layout/PageHeader'
 import { useRiskEvents, RiskEventSource, RiskEventStatus, Priority } from '@/lib/hooks/useRiskEvents'
 import { CreateRiskEventDialog } from '@/components/dialogs/CreateRiskEventDialog'
 import { RiskEventDetailSheet } from '@/components/dialogs/RiskEventDetailSheet'
@@ -113,23 +114,22 @@ export default function RiskEventsPage() {
   const currentYear = new Date().getFullYear()
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Risk Events</h1>
-          <p className="text-slate-500 mt-1">
-            Central repository for all audit triggers - the gateway between Risk Register and Audit Activities
-          </p>
-        </div>
-        <Button onClick={() => setCreateDialogOpen(true)} className="gap-2">
-          <Plus className="h-4 w-4" />
-          New Risk Event
-        </Button>
-      </div>
-
-      {/* Governance Notice */}
-      <Card className="border-amber-200 bg-amber-50">
+    <>
+      <PageHeader
+        icon={Zap}
+        title="Risk Events"
+        subtitle="Central repository for all audit triggers - the gateway between Risk Register and Audit Activities"
+        actions={
+          <Button size="sm" onClick={() => setCreateDialogOpen(true)} className="gap-2 bg-emerald-600 hover:bg-emerald-700">
+            <Plus className="h-4 w-4" />
+            New Risk Event
+          </Button>
+        }
+      />
+      <PageContainer>
+        <div className="space-y-6">
+          {/* Governance Notice */}
+          <Card className="border-amber-200 bg-amber-50">
         <CardContent className="py-4">
           <div className="flex items-start gap-3">
             <Shield className="h-5 w-5 text-amber-600 mt-0.5" />
@@ -562,6 +562,8 @@ export default function RiskEventsPage() {
         eventId={selectedEventId}
         onUpdate={() => fetchRiskEvents()}
       />
-    </div>
+        </div>
+      </PageContainer>
+    </>
   )
 }

@@ -29,6 +29,7 @@ import {
   Package,
   CheckCircle2,
 } from 'lucide-react'
+import { PageHeader, PageContainer } from '@/components/layout/PageHeader'
 import { toast } from 'sonner'
 import { createClientComponentClient } from '@/lib/supabase'
 import type { Database } from '@/lib/database.types'
@@ -340,42 +341,38 @@ export default function GroupsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/admin">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-5 w-5" />
+    <>
+      <PageHeader
+        icon={Shield}
+        title="Group Management"
+        subtitle="Manage user groups and module permissions"
+        backHref="/admin"
+        actions={
+          <>
+            {groups.length === 0 && (
+              <Button onClick={() => setShowQuickSetup(true)} variant="outline" size="sm" className="gap-2">
+                <Wand2 className="h-4 w-4" />
+                Quick Setup
+              </Button>
+            )}
+            <Button
+              size="sm"
+              onClick={() => {
+                setIsCreating(true)
+                setEditingGroupId(null)
+                setGroupForm({ group_name: '', description: '' })
+              }}
+              className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+            >
+              <Plus className="h-4 w-4" />
+              Create New Group
             </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">Group Management</h1>
-            <p className="text-slate-500 mt-1">Manage user groups and module permissions</p>
-          </div>
-        </div>
-        <div className="flex gap-3">
-          {groups.length === 0 && (
-            <Button onClick={() => setShowQuickSetup(true)} variant="outline" className="gap-2">
-              <Wand2 className="h-5 w-5" />
-              Quick Setup
-            </Button>
-          )}
-          <Button
-            onClick={() => {
-              setIsCreating(true)
-              setEditingGroupId(null)
-              setGroupForm({ group_name: '', description: '' })
-            }}
-            className="gap-2 bg-blue-600 hover:bg-blue-700"
-          >
-            <Plus className="h-5 w-5" />
-            Create New Group
-          </Button>
-        </div>
-      </div>
-
-      {/* Quick Setup Banner */}
+          </>
+        }
+      />
+      <PageContainer>
+        <div className="space-y-6">
+          {/* Quick Setup Banner */}
       {groups.length === 0 && (
         <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
           <CardContent className="py-6">
@@ -792,6 +789,8 @@ export default function GroupsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+        </div>
+      </PageContainer>
+    </>
   )
 }

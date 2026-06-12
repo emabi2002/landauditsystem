@@ -13,7 +13,9 @@ import {
   Briefcase,
   ArrowRight,
   Zap,
+  LayoutDashboard,
 } from 'lucide-react'
+import { PageHeader, PageContainer } from '@/components/layout/PageHeader'
 import { RiskProfileWidget } from '@/components/widgets/RiskProfileWidget'
 import { PSAPRatingsWidget } from '@/components/widgets/PSAPRatingsWidget'
 import { KRACompletionWidget } from '@/components/widgets/KRACompletionWidget'
@@ -235,26 +237,34 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900 mx-auto" />
-          <p className="mt-4 text-slate-600">Loading dashboard...</p>
-        </div>
-      </div>
+      <>
+        <PageHeader
+          icon={LayoutDashboard}
+          title="Dashboard"
+          subtitle="Overview of audit activities and compliance status"
+        />
+        <PageContainer>
+          <div className="flex items-center justify-center h-[60vh]">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900 mx-auto" />
+              <p className="mt-4 text-slate-600">Loading dashboard...</p>
+            </div>
+          </div>
+        </PageContainer>
+      </>
     )
   }
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
-        <p className="text-slate-500 mt-1">
-          Overview of audit activities and compliance status
-        </p>
-      </div>
-
-      {/* KPI Cards */}
+    <>
+      <PageHeader
+        icon={LayoutDashboard}
+        title="Dashboard"
+        subtitle="Overview of audit activities and compliance status"
+      />
+      <PageContainer>
+        <div className="space-y-6">
+          {/* KPI Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {kpiData.map((kpi) => (
           <Card key={kpi.title} className="p-6 bg-white border-slate-200">
@@ -466,7 +476,9 @@ export default function DashboardPage() {
             </p>
           </div>
         )}
-      </Card>
-    </div>
+          </Card>
+        </div>
+      </PageContainer>
+    </>
   )
 }

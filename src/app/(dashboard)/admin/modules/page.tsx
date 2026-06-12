@@ -30,6 +30,7 @@ import {
   Settings,
   Wand2,
 } from 'lucide-react'
+import { PageHeader, PageContainer } from '@/components/layout/PageHeader'
 import { toast } from 'sonner'
 import { createClientComponentClient } from '@/lib/supabase'
 import type { Database } from '@/lib/database.types'
@@ -280,45 +281,42 @@ export default function ModulesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/admin">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-5 w-5" />
+    <>
+      <PageHeader
+        icon={Package}
+        title="Module Management"
+        subtitle="Configure system modules and features"
+        backHref="/admin"
+        actions={
+          <>
+            <Button
+              onClick={handleSeedModules}
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              disabled={seeding}
+            >
+              <Wand2 className="h-4 w-4" />
+              {seeding ? 'Seeding...' : 'Seed Default Modules'}
             </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">Module Management</h1>
-            <p className="text-slate-500 mt-1">Configure system modules and features</p>
-          </div>
-        </div>
-        <div className="flex gap-3">
-          <Button
-            onClick={handleSeedModules}
-            variant="outline"
-            className="gap-2"
-            disabled={seeding}
-          >
-            <Wand2 className="h-4 w-4" />
-            {seeding ? 'Seeding...' : 'Seed Default Modules'}
-          </Button>
-          <Button
-            onClick={() => {
-              setIsCreating(true)
-              setEditingModuleId(null)
-              setModuleForm({ module_name: '', module_key: '', description: '', category: 'core' })
-            }}
-            className="gap-2 bg-purple-600 hover:bg-purple-700"
-          >
-            <Plus className="h-5 w-5" />
-            Create Module
-          </Button>
-        </div>
-      </div>
-
-      {/* Create Module Form */}
+            <Button
+              size="sm"
+              onClick={() => {
+                setIsCreating(true)
+                setEditingModuleId(null)
+                setModuleForm({ module_name: '', module_key: '', description: '', category: 'core' })
+              }}
+              className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+            >
+              <Plus className="h-4 w-4" />
+              Create Module
+            </Button>
+          </>
+        }
+      />
+      <PageContainer>
+        <div className="space-y-6">
+          {/* Create Module Form */}
       {isCreating && (
         <Card>
           <CardHeader>
@@ -567,6 +565,8 @@ export default function ModulesPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+        </div>
+      </PageContainer>
+    </>
   )
 }

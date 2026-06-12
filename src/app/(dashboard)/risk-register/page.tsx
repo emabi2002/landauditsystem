@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, Filter, Download, RefreshCw, AlertTriangle, ShieldAlert, FileText, Building2, Scale, Eye, Edit2 } from 'lucide-react'
+import { PageHeader, PageContainer } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -159,33 +160,32 @@ export default function RiskRegisterPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Risk Register</h1>
-          <p className="text-slate-500 mt-1">
-            Authoritative risk landscape for DLPP - The spine of the Audit & Compliance System
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => fetchRisks()}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
-          </Button>
-          <Button variant="outline" onClick={handleExportCSV}>
-            <Download className="mr-2 h-4 w-4" />
-            Export CSV
-          </Button>
-          <Button onClick={() => setCreateDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Risk
-          </Button>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-5">
+    <>
+      <PageHeader
+        icon={ShieldAlert}
+        title="Risk Register"
+        subtitle="Authoritative risk landscape for DLPP - The spine of the Audit & Compliance System"
+        actions={
+          <>
+            <Button variant="outline" size="sm" onClick={() => fetchRisks()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleExportCSV}>
+              <Download className="mr-2 h-4 w-4" />
+              Export CSV
+            </Button>
+            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Risk
+            </Button>
+          </>
+        }
+      />
+      <PageContainer>
+        <div className="space-y-6">
+          {/* Stats Cards */}
+          <div className="grid gap-4 md:grid-cols-5">
         <Card className="border-l-4 border-l-slate-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Risks</CardTitle>
@@ -602,6 +602,8 @@ export default function RiskRegisterPage() {
         risk={selectedRisk}
         onUpdate={() => fetchRisks()}
       />
-    </div>
+        </div>
+      </PageContainer>
+    </>
   )
 }

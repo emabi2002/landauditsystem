@@ -13,7 +13,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
-import { Plus, Search, Filter, Eye, Edit } from 'lucide-react'
+import { Plus, Search, Filter, Eye, Edit, AlertTriangle } from 'lucide-react'
+import { PageHeader, PageContainer } from '@/components/layout/PageHeader'
 import {
   Select,
   SelectContent,
@@ -96,18 +97,15 @@ export default function FindingsPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Findings</h1>
-          <p className="text-slate-500 mt-1">
-            Review and manage audit findings across engagements
-          </p>
-        </div>
+    <>
+      <PageHeader
+        icon={AlertTriangle}
+        title="Findings"
+        subtitle="Review and manage audit findings across engagements"
+        actions={
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-slate-900 hover:bg-slate-800">
+            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700">
               <Plus className="mr-2 h-4 w-4" />
               New Finding
             </Button>
@@ -244,9 +242,11 @@ export default function FindingsPage() {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
-
-      {/* Filters */}
+        }
+      />
+      <PageContainer>
+        <div className="space-y-6">
+          {/* Filters */}
       <Card className="p-4 bg-white border-slate-200">
         <div className="flex items-center gap-4">
           <div className="flex-1 relative">
@@ -346,6 +346,8 @@ export default function FindingsPage() {
           </TableBody>
         </Table>
       </Card>
-    </div>
+        </div>
+      </PageContainer>
+    </>
   )
 }

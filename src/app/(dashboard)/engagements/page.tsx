@@ -23,7 +23,8 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Plus, Search, Eye, Edit, Trash2, Loader2, Zap, AlertTriangle, ArrowRight } from 'lucide-react'
+import { Plus, Search, Eye, Edit, Trash2, Loader2, Zap, AlertTriangle, ArrowRight, Briefcase } from 'lucide-react'
+import { PageHeader, PageContainer } from '@/components/layout/PageHeader'
 import {
   Select,
   SelectContent,
@@ -243,18 +244,15 @@ export default function EngagementsPage() {
   )
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Engagements</h1>
-          <p className="text-slate-500 mt-1">
-            Manage audit engagements and their lifecycle
-          </p>
-        </div>
+    <>
+      <PageHeader
+        icon={Briefcase}
+        title="Engagements"
+        subtitle="Manage audit engagements and their lifecycle"
+        actions={
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-slate-900 hover:bg-slate-800">
+            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700">
               <Plus className="mr-2 h-4 w-4" />
               New Engagement
             </Button>
@@ -420,7 +418,7 @@ export default function EngagementsPage() {
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-slate-900 hover:bg-slate-800"
+                  className="bg-emerald-600 hover:bg-emerald-700"
                   disabled={submitting || !formData.risk_event_id}
                 >
                   {submitting ? (
@@ -436,9 +434,11 @@ export default function EngagementsPage() {
             </form>
           </DialogContent>
         </Dialog>
-      </div>
-
-      {/* Governance Notice */}
+        }
+      />
+      <PageContainer>
+        <div className="space-y-6">
+          {/* Governance Notice */}
       <Card className="p-4 bg-amber-50 border-amber-200">
         <div className="flex items-start gap-3">
           <Zap className="h-5 w-5 text-amber-600 mt-0.5" />
@@ -656,7 +656,7 @@ export default function EngagementsPage() {
               >
                 Cancel
               </Button>
-              <Button type="submit" className="bg-slate-900 hover:bg-slate-800" disabled={submitting}>
+              <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700" disabled={submitting}>
                 {submitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -697,6 +697,8 @@ export default function EngagementsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+        </div>
+      </PageContainer>
+    </>
   )
 }
