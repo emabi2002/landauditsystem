@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClientComponentClient } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
+import { loadAuditProfile } from '@/lib/auth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,7 +15,6 @@ import Link from 'next/link'
 
 export default function LoginPage() {
   const router = useRouter()
-  const supabase = createClientComponentClient()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -35,30 +35,19 @@ export default function LoginPage() {
       if (signInError) throw signInError
 
       if (data.user) {
-        // Check if user has audit system access
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('system_access, is_active')
-          .eq('id', data.user.id)
-          .single()
+        // Load the shared DLPP profile + audit access for this user
+        const profile = await loadAuditProfile()
 
-        if (profile) {
-          if (!profile.is_active) {
-            await supabase.auth.signOut()
-            throw new Error('Your account has been deactivated. Please contact administrator.')
-          }
+        if (profile && !profile.is_active) {
+          await supabase.auth.signOut()
+          throw new Error('Your account has been deactivated. Please contact your administrator.')
+        }
 
-          const systemAccess = profile.system_access as string[]
-          if (systemAccess && !systemAccess.includes('audit')) {
-            await supabase.auth.signOut()
-            throw new Error('You do not have access to the Audit System. Please contact administrator.')
-          }
-
-          // Update last login
-          await supabase
-            .from('user_profiles')
-            .update({ last_login_at: new Date().toISOString() })
-            .eq('id', data.user.id)
+        if (profile && !profile.hasAuditAccess) {
+          await supabase.auth.signOut()
+          throw new Error(
+            'You do not have access to the Audit System. Please contact your administrator.'
+          )
         }
 
         toast.success('Login successful!')

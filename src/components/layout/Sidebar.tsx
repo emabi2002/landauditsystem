@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { loadAuditProfile } from '@/lib/auth'
 import {
   LayoutDashboard,
   Shield,
@@ -122,6 +123,12 @@ export function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname()
 
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  useEffect(() => {
+    loadAuditProfile().then((p) => setIsAdmin(p?.isAdmin ?? false))
+  }, [])
+
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {}
     navigationGroups.forEach((group) => {
@@ -155,6 +162,11 @@ export function Sidebar({
   const isActiveGroup = (group: NavGroup) => {
     return group.items.some((item) => isActiveItem(item.href))
   }
+
+  // Role-based access: only administrators see the Administration section.
+  const visibleGroups = navigationGroups.filter(
+    (group) => group.name !== 'Administration' || isAdmin
+  )
 
   return (
     <>
@@ -191,7 +203,7 @@ export function Sidebar({
         {/* Navigation */}
         <nav className="h-[calc(100vh-4rem)] overflow-y-auto py-4 px-2">
           <div className="space-y-1">
-            {navigationGroups.map((group) => {
+            {visibleGroups.map((group) => {
               const GroupIcon = group.icon
               const isOpen = openGroups[group.name]
               const isGroupActive = isActiveGroup(group)

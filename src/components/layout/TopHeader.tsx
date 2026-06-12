@@ -31,6 +31,7 @@ import { toast } from 'sonner'
 import { GlobalSearch } from './GlobalSearch'
 import { NotificationsBell } from './NotificationsBell'
 import { cn } from '@/lib/utils'
+import { loadAuditProfile } from '@/lib/auth'
 
 interface TopHeaderProps {
   sidebarCollapsed?: boolean
@@ -91,42 +92,21 @@ export function TopHeader({ sidebarCollapsed, onToggleSidebar, onMobileToggle }:
   }, [])
 
   const loadUserProfile = async () => {
-    const devFallback: UserProfile = {
-      full_name: 'John Doe',
-      email: 'admin@dlpp.gov.pg',
-      primaryGroup: 'Audit Manager',
-      systemAccess: ['audit', 'cases', 'corporate'],
-    }
-
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        setUserProfile(devFallback)
+      const profile = await loadAuditProfile()
+      if (!profile) {
+        setUserProfile(null)
         return
       }
-
-      const { data: profileData } = await (supabase as any)
-        .from('user_profiles')
-        .select('full_name, system_access')
-        .eq('id', user.id)
-        .single()
-
-      const { data: userGroups } = await (supabase as any)
-        .from('user_groups')
-        .select('groups(group_name)')
-        .eq('user_id', user.id)
-        .limit(1)
-        .single()
-
       setUserProfile({
-        full_name: profileData?.full_name || null,
-        email: user.email || '',
-        primaryGroup: userGroups?.groups?.group_name || null,
-        systemAccess: (profileData?.system_access as string[]) || ['audit'],
+        full_name: profile.full_name,
+        email: profile.email,
+        primaryGroup: profile.primaryGroup || (profile.role ? profile.role : null),
+        systemAccess: profile.systemAccess,
       })
     } catch (error) {
       console.error('Error loading user profile:', error)
-      setUserProfile(devFallback)
+      setUserProfile(null)
     }
   }
 
@@ -137,8 +117,9 @@ export function TopHeader({ sidebarCollapsed, onToggleSidebar, onMobileToggle }:
     router.refresh()
   }
 
+  const isAdmin = userProfile?.systemAccess?.includes('admin') ?? false
   const accessibleSystems = DLPP_SYSTEMS.filter(
-    (s) => s.current || userProfile?.systemAccess?.includes(s.key)
+    (s) => s.current || isAdmin || userProfile?.systemAccess?.includes(s.key)
   )
 
   return (

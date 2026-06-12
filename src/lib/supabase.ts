@@ -32,16 +32,16 @@ export async function getCurrentUser() {
   return user
 }
 
-// Helper to get current user's audit_users record (if exists)
+// Helper to get current user's shared DLPP profile record (if exists)
 export async function getCurrentAuditUser() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { data: auditUser } = await supabase
-    .from('audit_users')
+  const { data: auditUser } = await (supabase as any)
+    .from('profiles')
     .select('*')
     .eq('id', user.id)
-    .single()
+    .maybeSingle()
 
   return auditUser
 }
