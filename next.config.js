@@ -1,5 +1,3 @@
-const path = require("path");
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Reduce peak memory during `next build` (large app + limited container RAM).
@@ -31,10 +29,11 @@ const nextConfig = {
   webpack: (config, { dev }) => {
     config.resolve.alias = {
       ...config.resolve.alias,
-      "react-joyride$": path.resolve(
-        __dirname,
-        "node_modules/react-joyride/dist/index.js"
-      ),
+      // Resolve to react-joyride's CommonJS entry robustly (works under both
+      // bun and npm, regardless of how the package is hoisted). Its ESM build
+      // (dist/index.mjs) imports the legacy `unmountComponentAtNode` react-dom
+      // API in a way webpack's strict ESM interop rejects, breaking the build.
+      "react-joyride$": require.resolve("react-joyride"),
     };
     // CRITICAL FIX for the recurring "missing ) after argument list" /
     // ChunkLoadError crash: Next.js dev defaults to the `eval-source-map`
