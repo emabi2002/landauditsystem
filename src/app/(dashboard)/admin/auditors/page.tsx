@@ -766,14 +766,14 @@ export default function AuditorProfilesPage() {
                   <div className="space-y-2">
                     <Label>Link to User Account</Label>
                     <Select
-                      value={formData.user_id}
-                      onValueChange={(value) => setFormData({ ...formData, user_id: value })}
+                      value={formData.user_id || 'none'}
+                      onValueChange={(value) => setFormData({ ...formData, user_id: value === 'none' ? '' : value })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select user (optional)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">No linked user</SelectItem>
+                        <SelectItem value="none">No linked user</SelectItem>
                         {availableUsers.map((user) => (
                           <SelectItem key={user.id} value={user.id}>
                             {user.full_name || user.email}
