@@ -183,3 +183,61 @@ Goal: Comprehensive, data-driven Interactive Help & Training Centre for DLPP Aud
 - [ ] NOTE (workflow): live preview now serves the production build, so code
       changes require a rebuild (`bun run build`) + server restart to appear
       (HMR is off in exchange for a stable, crash-free preview).
+
+## Scope RBAC users & groups by application (multi-app aware) — CODE DONE
+Approach evolved from "Audit-only tag" to full multi-application scoping because the
+DB is SHARED (audit / corporate / landcase). Every group/module/user is scoped by a
+`system` value; the app degrades gracefully before the DB column exists.
+
+- [x] `src/lib/rbac-scope.ts`: APPLICATIONS registry, conservative name classifier
+      (ambiguous → NULL, never mis-tagged), fetch/insert/update helpers that retry
+      without the `system` column, `fetchModulesForApplication`
+- [x] `src/lib/rbac-types.ts`: `ApplicationKey` + optional `system` on Group/Module
+- [x] Groups page: application filter chips (audit/corporate/landcase/unassigned/all),
+      per-app create/edit, menu-access matrix scoped to the group's own app, amber
+      banner when the `system` column is missing
+- [x] Modules page: application filter; app tag on create/edit; seed Audit menu
+- [x] Users page: application filter; group dropdown scoped to the user's app(s);
+      Manage-Groups dialog scoped per app
+- [x] Admin hub: stats scoped to `system='audit'`
+- [x] Fixed duplicated Application+Route block in the Module edit form
+- [x] Migration `015_shared_rbac_system_scoping.sql` (additive/idempotent):
+      groups.system + conservative backfill + seed audit modules + RLS + reload
+- [x] tsc 0 errors; clean production build; server 200; Version 26
+
+### Live DB state (verified read-only via service-role REST, project yvnkyjnwvylrweyzvibs)
+- `groups.system` does NOT exist yet (migration 015 not applied)
+- 15 groups. Conservative backfill/classifier resolves them as:
+  - audit (2): Audit Team, Auditor
+  - corporate (7): Corporate Deputy Secretary/Director/Legal Manager/Legal Officer/
+    Secretary/Super Admin, Senior Corporate Legal Officer
+  - landcase (3): Document Clerk, Legal Clerk, Litigation
+  - UNASSIGNED/NULL (3): Manager, Super Admin, Viewer  <- admin tags these in the UI
+- modules by system: admin 3, corporate 13, landcase 34, audit 0 (015 seeds audit)
+- NO other app's rows are retagged (data-safety flaw from old migration 014 resolved)
+
+### Migration 015 — APPLIED & VERIFIED (user ran it in the SQL Editor)
+Verified read-only via service-role REST after the user applied it:
+- `groups.system` now EXISTS (probe HTTP 200; was 400/absent before).
+- Backfill exactly as designed: audit(2) Audit Team, Auditor | corporate(7) all
+  Corporate* + Senior Corporate Legal Officer | landcase(3) Document Clerk, Legal
+  Clerk, Litigation | UNASSIGNED(3) Manager, Super Admin, Viewer.
+- modules by system: admin 3, corporate 13, landcase 34 (UNCHANGED) + audit 0->19
+  seeded (audit_dashboard … audit_divisions). No other app's rows touched.
+- App effect: Groups page amber banner gone; Audit menu-access matrix now has 19
+  modules to allocate; the 3 unassigned groups can be tagged via Edit -> Application.
+### Post-migration follow-ups — DONE (via safe service-role writes, reversible in UI)
+- [x] Tagged the 3 unassigned groups -> audit (Manager, Super Admin, Viewer).
+      Verified: audit(5) Audit Team, Auditor, Manager, Super Admin, Viewer;
+      corporate(7) + landcase(3) UNCHANGED. NOTE: "Super Admin" tagged audit as a
+      default for this deployment — re-tag via Edit->Application if it's cross-app.
+- [x] Allocated default menu access (surgical; preserved pre-existing perms like
+      audit_trail + non-audit modules):
+      - Auditor: workflow (engagements/fieldwork/findings/recommendations/
+        action_plans/risk_events) = CRUPE; dashboard/risk_profiles/psap/kra = R;
+        risk_register/compliance/reports = RPE; admin modules = none.
+      - Audit Team: all 13 workflow modules = R; compliance/reports = RPE; admin = none.
+- [x] Initialised git repo (was empty .git) + initial commit b381317 (182 files).
+      Working tree clean. No remote configured.
+- [ ] Optional: push to a GitHub remote (needs repo name/visibility — ask user).
+- [ ] Collaborative: user logs in and walks Groups/Modules/Users so I can fine-tune UX.

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { loadAuditProfile } from '@/lib/auth'
+import { loadAuditMenu } from '@/lib/auth'
 import {
   LayoutDashboard,
   Shield,
@@ -135,10 +135,24 @@ export function Sidebar({
   const pathname = usePathname()
 
   const [isAdmin, setIsAdmin] = useState(false)
+  // null = do not restrict (admin / not configured yet). Otherwise, only these
+  // routes are shown, so each group/role gets its own tailored menu.
+  const [allowedRoutes, setAllowedRoutes] = useState<string[] | null>(null)
 
   useEffect(() => {
-    loadAuditProfile().then((p) => setIsAdmin(p?.isAdmin ?? false))
+    loadAuditMenu().then((m) => {
+      setIsAdmin(m.isAdmin)
+      setAllowedRoutes(m.allowedRoutes)
+    })
   }, [])
+
+  // Support items are always available regardless of role permissions.
+  const ALWAYS_VISIBLE = ['/help', '/api-docs']
+
+  const canSeeRoute = (href: string) =>
+    allowedRoutes === null ||
+    ALWAYS_VISIBLE.includes(href) ||
+    allowedRoutes.includes(href)
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {}
@@ -174,10 +188,17 @@ export function Sidebar({
     return group.items.some((item) => isActiveItem(item.href))
   }
 
-  // Role-based access: only administrators see the Administration section.
-  const visibleGroups = navigationGroups.filter(
-    (group) => group.name !== 'Administration' || isAdmin
-  )
+  // Role-based access:
+  //  - Only administrators see the Administration section.
+  //  - Within every group, only items the user's role/group can read are shown.
+  //  - Groups with no visible items are hidden entirely.
+  const visibleGroups = navigationGroups
+    .filter((group) => group.name !== 'Administration' || isAdmin)
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => canSeeRoute(item.href)),
+    }))
+    .filter((group) => group.items.length > 0)
 
   return (
     <>

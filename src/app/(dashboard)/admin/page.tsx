@@ -25,6 +25,7 @@ import { createClientComponentClient } from '@/lib/supabase'
 import type { Database as DbTypes } from '@/lib/database.types'
 import { PageHeader, PageContainer } from '@/components/layout/PageHeader'
 import { HelpTooltip } from '@/components/help/HelpTooltip'
+import { fetchGroupsWithSystem } from '@/lib/rbac-scope'
 
 interface AdminStats {
   totalUsers: number
@@ -55,18 +56,22 @@ export default function AdminPage() {
 
   const loadStats = async () => {
     try {
-      // Load counts from database
+      // Load counts. Users come from the shared directory (via the secure API);
+      // groups + modules are scoped to the Audit application.
       const [divisionsRes, groupsRes, modulesRes, usersRes, auditorsRes] = await Promise.all([
         supabase.from('audit_divisions').select('id', { count: 'exact', head: true }),
-        supabase.from('groups').select('id', { count: 'exact', head: true }),
-        supabase.from('modules').select('id', { count: 'exact', head: true }),
-        supabase.from('audit_users').select('id, is_active'),
+        fetchGroupsWithSystem(supabase),
+        supabase.from('modules').select('id', { count: 'exact', head: true }).eq('system', 'audit'),
+        fetch('/api/users').then((r) => r.json()).catch(() => ({ data: [] })),
         supabase.from('audit_auditor_profiles').select('id', { count: 'exact', head: true }),
       ])
 
-      const usersData = (usersRes.data as any[]) || []
-      const totalUsers = usersData.length
-      const activeUsers = usersData.filter((u: any) => u.is_active).length
+      const usersData = (usersRes?.data as any[]) || []
+      const auditUsers = usersData.filter((u) => (u.systems || []).includes('audit'))
+      const totalUsers = auditUsers.length
+      const activeUsers = auditUsers.filter((u: any) => u.status === 'active').length
+
+      const auditGroups = (groupsRes.data || []).filter((g) => g.system === 'audit')
 
       // Get recent activity count from audit_log
       const { count: activityCount } = await supabase
@@ -76,7 +81,7 @@ export default function AdminPage() {
       setStats({
         totalUsers,
         activeUsers,
-        totalGroups: groupsRes.count || 0,
+        totalGroups: auditGroups.length,
         totalModules: modulesRes.count || 0,
         totalDivisions: divisionsRes.count || 0,
         totalAuditors: auditorsRes.count || 0,

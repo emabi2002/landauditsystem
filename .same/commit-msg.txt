@@ -1,0 +1,19 @@
+Recreate audit system as a self-contained project + fix governance modules
+
+- Serve a minified production build in the dev script to stop the recurring
+  "missing )" ChunkLoadError (dev chunks were 6-8 MB and timed out over the proxy)
+- Disassociate from the previous Supabase project: remove stale scripts that
+  hardcoded the old project ref + a leaked service-role key + old table names
+- Add migrations 010-013: audit_users/user_groups reconcile, auditor tables +
+  RLS hardening, org_units + FKs, and permissive RLS for the governance tables
+- Add scripts/seed-governance.ts and setup docs (supabase/SETUP.md,
+  supabase/setup/complete_setup.sql) for reproducible provisioning
+- Restore the empty useKRAs hook (KRA page crash); compute the KRA status
+  summary in JS since the DB view is absent
+- Fix PSAP scoring to the 0-100 scale (works around a 1-5 recompute trigger),
+  align Add-Risk-Item status options to the DB constraint (Open/Closed), and
+  seed current-year (2025-2026) governance data so default views show data
+
+Generated with Same (https://same.new)
+
+Co-Authored-By: Same <noreply@same.new>

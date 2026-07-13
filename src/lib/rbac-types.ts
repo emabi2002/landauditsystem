@@ -1,9 +1,18 @@
 // RBAC (Role-Based Access Control) Type Definitions for DLPP Audit System
 
+// DLPP runs several applications on ONE shared database. This key scopes a
+// group / module / user to a single application ("system" in the DB columns).
+export type ApplicationKey = 'audit' | 'corporate' | 'landcase';
+
 export interface Group {
   id: string;
   group_name: string;
   description: string | null;
+  // Which DLPP application this group belongs to. Stored in the shared
+  // `groups.system` column (migration 015); may be null for legacy/ambiguous
+  // groups, in which case it is inferred from the name at read time.
+  system?: ApplicationKey | string | null;
+  is_active?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -16,6 +25,11 @@ export interface Module {
   category: string | null;
   icon: string | null;
   route: string | null;
+  // Which application this menu item belongs to (shared `modules.system`).
+  system?: ApplicationKey | string | null;
+  parent_module_id?: string | null;
+  display_order?: number | null;
+  is_active?: boolean;
   created_at: string;
 }
 

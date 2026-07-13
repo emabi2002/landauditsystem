@@ -34,6 +34,13 @@ const nextConfig = {
       // (dist/index.mjs) imports the legacy `unmountComponentAtNode` react-dom
       // API in a way webpack's strict ESM interop rejects, breaking the build.
       "react-joyride$": require.resolve("react-joyride"),
+      // react-joyride's CJS build externally `require("react-floater")`, whose
+      // ESM build (es/index.js) imports the legacy react-dom APIs
+      // `unstable_renderSubtreeIntoContainer` / `unmountComponentAtNode`. Some
+      // installs (e.g. Netlify's regenerated lockfile) make webpack pick that
+      // ESM build and fail. Force its CommonJS build, which accesses those APIs
+      // at runtime instead of via a statically-checked ESM import.
+      "react-floater$": require.resolve("react-floater"),
     };
     // CRITICAL FIX for the recurring "missing ) after argument list" /
     // ChunkLoadError crash: Next.js dev defaults to the `eval-source-map`

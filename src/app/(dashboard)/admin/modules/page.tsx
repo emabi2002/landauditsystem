@@ -29,6 +29,7 @@ import {
   BarChart3,
   Settings,
   Wand2,
+  LayoutGrid,
 } from 'lucide-react'
 import { PageHeader, PageContainer } from '@/components/layout/PageHeader'
 import { HelpTooltip } from '@/components/help/HelpTooltip'
@@ -36,7 +37,13 @@ import { toast } from 'sonner'
 import { createClientComponentClient } from '@/lib/supabase'
 import type { Database } from '@/lib/database.types'
 import { MODULE_CATEGORIES } from '@/lib/rbac-types'
-import type { Module } from '@/lib/rbac-types'
+import type { Module, ApplicationKey } from '@/lib/rbac-types'
+import {
+  APPLICATIONS,
+  CURRENT_APPLICATION,
+  applicationBadgeClass,
+  applicationLabel,
+} from '@/lib/rbac-scope'
 
 // Icon mapping for categories
 const categoryIcons: Record<string, typeof Package> = {
@@ -47,34 +54,37 @@ const categoryIcons: Record<string, typeof Package> = {
   administration: Settings,
 }
 
-// Default modules for the audit system
+// Default Audit menu modules (aligned with migration 015 — audit_-prefixed keys
+// so they never collide with the other apps' module_keys on the shared table).
 const DEFAULT_MODULES = [
   // Core
-  { module_name: 'Dashboard', module_key: 'dashboard', category: 'core', description: 'Main dashboard with KPIs and overview' },
-  { module_name: 'Risk Register', module_key: 'risk_register', category: 'core', description: 'Authoritative risk landscape for DLPP' },
-  { module_name: 'Risk Events', module_key: 'risk_events', category: 'core', description: 'Central repository for audit triggers' },
+  { module_name: 'Dashboard', module_key: 'audit_dashboard', category: 'core', route: '/dashboard', description: 'Main dashboard with KPIs and overview' },
+  { module_name: 'Risk Register', module_key: 'audit_risk_register', category: 'core', route: '/risk-register', description: 'Authoritative risk landscape for DLPP' },
+  { module_name: 'Risk Events', module_key: 'audit_risk_events', category: 'core', route: '/risk-events', description: 'Central repository for audit triggers' },
 
   // Audit Workflow
-  { module_name: 'Engagements', module_key: 'engagements', category: 'audit_workflow', description: 'Audit engagement management' },
-  { module_name: 'Fieldwork', module_key: 'fieldwork', category: 'audit_workflow', description: 'Fieldwork and evidence collection' },
-  { module_name: 'Findings', module_key: 'findings', category: 'audit_workflow', description: 'Audit findings documentation' },
-  { module_name: 'Recommendations', module_key: 'recommendations', category: 'audit_workflow', description: 'Audit recommendations' },
-  { module_name: 'Action Plans', module_key: 'action_plans', category: 'audit_workflow', description: 'Action plan tracking and follow-up' },
+  { module_name: 'Engagements', module_key: 'audit_engagements', category: 'audit_workflow', route: '/engagements', description: 'Audit engagement management' },
+  { module_name: 'Fieldwork', module_key: 'audit_fieldwork', category: 'audit_workflow', route: '/fieldwork', description: 'Fieldwork and evidence collection' },
+  { module_name: 'Findings', module_key: 'audit_findings', category: 'audit_workflow', route: '/findings', description: 'Audit findings documentation' },
+  { module_name: 'Recommendations', module_key: 'audit_recommendations', category: 'audit_workflow', route: '/recommendations', description: 'Audit recommendations' },
+  { module_name: 'Action Plans', module_key: 'audit_action_plans', category: 'audit_workflow', route: '/action-plans', description: 'Action plan tracking and follow-up' },
 
   // Risk & Governance
-  { module_name: 'Risk Profiles', module_key: 'risk_profiles', category: 'risk_governance', description: 'Division risk profiles' },
-  { module_name: 'PSAP Scorecard', module_key: 'psap_scorecard', category: 'risk_governance', description: 'Performance assessment scorecard' },
-  { module_name: 'KRA & Workplan', module_key: 'kra_workplan', category: 'risk_governance', description: 'Key result areas and work planning' },
+  { module_name: 'Risk Profiles', module_key: 'audit_risk_profiles', category: 'risk_governance', route: '/risk-profiles', description: 'Division risk profiles' },
+  { module_name: 'PSAP Scorecard', module_key: 'audit_psap_scorecard', category: 'risk_governance', route: '/psap-scorecard', description: 'Performance assessment scorecard' },
+  { module_name: 'KRA & Workplan', module_key: 'audit_kra_workplan', category: 'risk_governance', route: '/kra-workplan', description: 'Key result areas and work planning' },
 
   // Management
-  { module_name: 'Compliance', module_key: 'compliance', category: 'management', description: 'Compliance monitoring' },
-  { module_name: 'Reports', module_key: 'reports', category: 'management', description: 'Audit reports generation' },
+  { module_name: 'Compliance', module_key: 'audit_compliance', category: 'management', route: '/compliance', description: 'Compliance monitoring' },
+  { module_name: 'Reports', module_key: 'audit_reports', category: 'management', route: '/reports', description: 'Audit reports generation' },
 
   // Administration
-  { module_name: 'User Management', module_key: 'users', category: 'administration', description: 'Manage system users' },
-  { module_name: 'Group Management', module_key: 'groups', category: 'administration', description: 'Manage user groups and permissions' },
-  { module_name: 'Module Management', module_key: 'modules', category: 'administration', description: 'Configure system modules' },
-  { module_name: 'Division Management', module_key: 'divisions', category: 'administration', description: 'Manage DLPP divisions' },
+  { module_name: 'Admin Hub', module_key: 'audit_admin', category: 'administration', route: '/admin', description: 'Administration hub' },
+  { module_name: 'User Management', module_key: 'audit_users', category: 'administration', route: '/admin/users', description: 'Manage system users' },
+  { module_name: 'Auditor Profiles', module_key: 'audit_auditors', category: 'administration', route: '/admin/auditors', description: 'Manage auditor profiles' },
+  { module_name: 'Group Management', module_key: 'audit_groups', category: 'administration', route: '/admin/groups', description: 'Manage user groups and permissions' },
+  { module_name: 'Module Management', module_key: 'audit_modules', category: 'administration', route: '/admin/modules', description: 'Configure system modules' },
+  { module_name: 'Division Management', module_key: 'audit_divisions', category: 'administration', route: '/admin/divisions', description: 'Manage DLPP divisions' },
 ]
 
 export default function ModulesPage() {
@@ -82,11 +92,21 @@ export default function ModulesPage() {
   const [loading, setLoading] = useState(true)
   const [isCreating, setIsCreating] = useState(false)
   const [editingModuleId, setEditingModuleId] = useState<string | null>(null)
-  const [moduleForm, setModuleForm] = useState({
+  const [systemFilter, setSystemFilter] = useState<ApplicationKey>(CURRENT_APPLICATION)
+  const [moduleForm, setModuleForm] = useState<{
+    module_name: string
+    module_key: string
+    description: string
+    category: string
+    route: string
+    system: ApplicationKey
+  }>({
     module_name: '',
     module_key: '',
     description: '',
     category: 'core',
+    route: '',
+    system: CURRENT_APPLICATION,
   })
   const [seeding, setSeeding] = useState(false)
 
@@ -102,7 +122,8 @@ export default function ModulesPage() {
       const { data, error } = await supabase
         .from('modules')
         .select('*')
-        .order('module_name')
+        .order('display_order', { ascending: true })
+        .order('module_name', { ascending: true })
 
       if (error) throw error
       setModules((data as Module[]) || [])
@@ -113,6 +134,20 @@ export default function ModulesPage() {
       setLoading(false)
     }
   }
+
+  const emptyForm = () => ({
+    module_name: '',
+    module_key: '',
+    description: '',
+    category: 'core',
+    route: '',
+    system: systemFilter,
+  })
+
+  // Only show modules for the selected application/system.
+  const systemModules = modules.filter((m) => (m.system || 'audit') === systemFilter)
+  const countForSystem = (key: ApplicationKey) =>
+    modules.filter((m) => (m.system || 'audit') === key).length
 
   const handleCreateModule = async () => {
     if (!moduleForm.module_name.trim() || !moduleForm.module_key.trim()) {
@@ -131,6 +166,9 @@ export default function ModulesPage() {
         module_key: sanitizedKey,
         description: moduleForm.description || null,
         category: moduleForm.category,
+        route: moduleForm.route || null,
+        system: moduleForm.system,
+        is_active: true,
       } as any)
 
       if (error) {
@@ -142,8 +180,8 @@ export default function ModulesPage() {
         return
       }
 
-      toast.success('Module created successfully')
-      setModuleForm({ module_name: '', module_key: '', description: '', category: 'core' })
+      toast.success(`Module created in ${applicationLabel(moduleForm.system)}`)
+      setModuleForm(emptyForm())
       setIsCreating(false)
       loadModules()
     } catch (error: any) {
@@ -171,6 +209,8 @@ export default function ModulesPage() {
           module_key: sanitizedKey,
           description: moduleForm.description || null,
           category: moduleForm.category,
+          route: moduleForm.route || null,
+          system: moduleForm.system,
         } as any)
         .eq('id', moduleId)
 
@@ -178,7 +218,7 @@ export default function ModulesPage() {
 
       toast.success('Module updated successfully')
       setEditingModuleId(null)
-      setModuleForm({ module_name: '', module_key: '', description: '', category: 'core' })
+      setModuleForm(emptyForm())
       loadModules()
     } catch (error: any) {
       console.error('Error updating module:', error)
@@ -221,11 +261,13 @@ export default function ModulesPage() {
       // Get existing module keys
       const existingKeys = modules.map((m) => m.module_key)
 
-      // Filter out modules that already exist
-      const modulesToInsert = DEFAULT_MODULES.filter((m) => !existingKeys.includes(m.module_key))
+      // Filter out modules that already exist; tag each as an Audit module.
+      const modulesToInsert = DEFAULT_MODULES.filter(
+        (m) => !existingKeys.includes(m.module_key)
+      ).map((m) => ({ ...m, system: 'audit', is_active: true }))
 
       if (modulesToInsert.length === 0) {
-        toast.info('All default modules already exist')
+        toast.info('All default Audit modules already exist')
         return
       }
 
@@ -233,7 +275,7 @@ export default function ModulesPage() {
 
       if (error) throw error
 
-      toast.success(`Successfully created ${modulesToInsert.length} module(s)!`)
+      toast.success(`Successfully created ${modulesToInsert.length} Audit module(s)!`)
       loadModules()
     } catch (error: any) {
       console.error('Error seeding modules:', error)
@@ -250,18 +292,26 @@ export default function ModulesPage() {
       module_key: module.module_key,
       description: module.description || '',
       category: module.category || 'core',
+      route: module.route || '',
+      system: (module.system as ApplicationKey) || systemFilter,
     })
     setIsCreating(false)
+  }
+
+  const startCreate = () => {
+    setIsCreating(true)
+    setEditingModuleId(null)
+    setModuleForm(emptyForm())
   }
 
   const cancelEdit = () => {
     setEditingModuleId(null)
     setIsCreating(false)
-    setModuleForm({ module_name: '', module_key: '', description: '', category: 'core' })
+    setModuleForm(emptyForm())
   }
 
-  // Group modules by category
-  const groupedModules = modules.reduce((acc, module) => {
+  // Group the current system's modules by category
+  const groupedModules = systemModules.reduce((acc, module) => {
     const category = module.category || 'core'
     if (!acc[category]) {
       acc[category] = []
@@ -302,11 +352,7 @@ export default function ModulesPage() {
             </Button>
             <Button
               size="sm"
-              onClick={() => {
-                setIsCreating(true)
-                setEditingModuleId(null)
-                setModuleForm({ module_name: '', module_key: '', description: '', category: 'core' })
-              }}
+              onClick={startCreate}
               className="gap-2 bg-emerald-600 hover:bg-emerald-700"
             >
               <Plus className="h-4 w-4" />
@@ -318,6 +364,39 @@ export default function ModulesPage() {
       />
       <PageContainer>
         <div className="space-y-6">
+          {/* Application (system) filter */}
+          <Card data-tour="filters">
+            <CardContent className="p-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-center gap-3">
+                  <LayoutGrid className="h-5 w-5 text-slate-500" />
+                  <div>
+                    <p className="text-sm font-medium text-slate-800">Application</p>
+                    <p className="text-xs text-slate-500">
+                      Menu items belong to a DLPP system
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {APPLICATIONS.map((app) => (
+                    <button
+                      key={app.key}
+                      onClick={() => setSystemFilter(app.key)}
+                      className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                        systemFilter === app.key
+                          ? app.badgeClass
+                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      {app.label}
+                      <span className="ml-1.5 text-xs opacity-70">({countForSystem(app.key)})</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Create Module Form */}
       {isCreating && (
         <Card>
@@ -327,6 +406,24 @@ export default function ModulesPage() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Application *</Label>
+                <Select
+                  value={moduleForm.system}
+                  onValueChange={(value) => setModuleForm({ ...moduleForm, system: value as ApplicationKey })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {APPLICATIONS.map((app) => (
+                      <SelectItem key={app.key} value={app.key}>
+                        {app.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-2">
                 <Label>Module Name *</Label>
                 <Input
@@ -340,11 +437,19 @@ export default function ModulesPage() {
                 <Input
                   value={moduleForm.module_key}
                   onChange={(e) => setModuleForm({ ...moduleForm, module_key: e.target.value })}
-                  placeholder="e.g., risk_register"
+                  placeholder="e.g., audit_risk_register"
                 />
                 <p className="text-xs text-slate-500">
                   Lowercase letters, numbers, and underscores only
                 </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Route</Label>
+                <Input
+                  value={moduleForm.route}
+                  onChange={(e) => setModuleForm({ ...moduleForm, route: e.target.value })}
+                  placeholder="e.g., /risk-register"
+                />
               </div>
               <div className="space-y-2">
                 <Label>Category *</Label>
@@ -390,22 +495,27 @@ export default function ModulesPage() {
       <Card data-tour="table">
         <CardHeader>
           <CardTitle className="flex items-center gap-1.5">
-            System Modules ({modules.length})
+            {applicationLabel(systemFilter)} Menu ({systemModules.length})
             <HelpTooltip tooltipKey="admin-table" label="Modules" />
           </CardTitle>
           <CardDescription>
-            Modules represent different features of the system that can be assigned permissions
+            Menu items (modules) for {applicationLabel(systemFilter)} that groups can be granted access to
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {modules.length === 0 ? (
+          {systemModules.length === 0 ? (
             <div className="text-center py-12 text-slate-500">
               <Package className="h-12 w-12 mx-auto mb-3 text-slate-300" />
-              <p className="mb-4">No modules found. Create some or seed default modules.</p>
-              <Button onClick={handleSeedModules} disabled={seeding}>
-                <Wand2 className="h-4 w-4 mr-2" />
-                Seed Default Modules
-              </Button>
+              <p className="mb-4">
+                No {applicationLabel(systemFilter)} menu items yet.
+                {systemFilter === 'audit' && ' Create some or seed the default Audit menu.'}
+              </p>
+              {systemFilter === 'audit' && (
+                <Button onClick={handleSeedModules} disabled={seeding}>
+                  <Wand2 className="h-4 w-4 mr-2" />
+                  Seed Default Audit Modules
+                </Button>
+              )}
             </div>
           ) : (
             <div className="space-y-6">
@@ -456,6 +566,39 @@ export default function ModulesPage() {
                                       setModuleForm({ ...moduleForm, module_key: e.target.value })
                                     }
                                     className="mt-1"
+                                  />
+                                </div>
+                              </div>
+                              <div className="grid gap-3 md:grid-cols-2">
+                                <div>
+                                  <Label className="text-xs">Application</Label>
+                                  <Select
+                                    value={moduleForm.system}
+                                    onValueChange={(value) =>
+                                      setModuleForm({ ...moduleForm, system: value as ApplicationKey })
+                                    }
+                                  >
+                                    <SelectTrigger className="mt-1">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {APPLICATIONS.map((app) => (
+                                        <SelectItem key={app.key} value={app.key}>
+                                          {app.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div>
+                                  <Label className="text-xs">Route</Label>
+                                  <Input
+                                    value={moduleForm.route}
+                                    onChange={(e) =>
+                                      setModuleForm({ ...moduleForm, route: e.target.value })
+                                    }
+                                    className="mt-1"
+                                    placeholder="/route"
                                   />
                                 </div>
                               </div>
