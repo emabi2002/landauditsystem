@@ -76,10 +76,11 @@ interface Division {
 
 type UserFilter = ApplicationKey | 'all'
 
+// These map to the shared `users.role` CHECK constraint (officer / viewer /
+// admin). Fine-grained access is controlled by RBAC groups, not this field.
 const ROLE_OPTIONS = [
-  { value: 'user', label: 'Standard User' },
-  { value: 'officer', label: 'Officer' },
-  { value: 'manager', label: 'Manager' },
+  { value: 'officer', label: 'Officer (standard)' },
+  { value: 'viewer', label: 'Viewer (read-only)' },
   { value: 'admin', label: 'Administrator' },
 ]
 
@@ -88,7 +89,7 @@ const emptyForm = () => ({
   full_name: '',
   phone: '',
   department: '',
-  role: 'user',
+  role: 'officer',
   password: '',
   systems: [CURRENT_APPLICATION] as ApplicationKey[],
   group_id: '',
@@ -198,7 +199,11 @@ export default function UsersPage() {
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Failed to create user')
 
-      toast.success('User created successfully!')
+      toast.success(
+        json?.data?.linked
+          ? 'This email already had a DLPP login — granted the selected access and group (existing password kept).'
+          : 'User created successfully!',
+      )
       setCreateDialogOpen(false)
       setFormData(emptyForm())
       loadData()

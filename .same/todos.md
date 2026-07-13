@@ -237,7 +237,32 @@ Verified read-only via service-role REST after the user applied it:
         action_plans/risk_events) = CRUPE; dashboard/risk_profiles/psap/kra = R;
         risk_register/compliance/reports = RPE; admin modules = none.
       - Audit Team: all 13 workflow modules = R; compliance/reports = RPE; admin = none.
-- [x] Initialised git repo (was empty .git) + initial commit b381317 (182 files).
-      Working tree clean. No remote configured.
-- [ ] Optional: push to a GitHub remote (needs repo name/visibility — ask user).
+- [x] Initialised git repo (was empty .git) + committed the work.
+- [x] Pushed to GitHub emabi2002/landauditsystem (existing PUBLIC repo, main had
+      3 prior commits ending at the Netlify-fix). Rebased current work on top via
+      `git reset --soft origin/main` so it's a clean 13-file feature commit 206135b
+      (NO force-push, remote history preserved, fast-forward 1db99a4..206135b).
+      Verified secret scan clean (0 JWTs; .env* untracked). Remote main tip=206135b;
+      /api/users/route.ts now present on remote (the password fix was absent before).
+- [ ] Optional: trigger a Netlify redeploy so the LIVE site picks up the new commit
+      (GitHub push alone doesn't redeploy unless Netlify auto-deploy is connected).
+
+## Fix: user creation ("email already registered" + hidden role-constraint bug) — DONE
+Reported: creating a user showed "A user with this email address has already been
+registered". Root-caused TWO issues via live E2E against the shared DB:
+- [x] Shared-SSO reality: the email often already exists in auth (another DLPP app
+      or the admin's own account). POST /api/users now GRACEFULLY LINKS the existing
+      login (findAuthUserByEmail) and grants app access + group ADDITIVELY instead of
+      failing. Existing SSO password is preserved (use Edit->Reset Password to change).
+- [x] Hidden bug: the shared `users.role` CHECK constraint only allows
+      {officer, admin, viewer}. The UI defaulted role='user' (and offered 'manager'),
+      both INVALID -> every new-user insert 400'd on users_role_check. Probed the live
+      constraint to confirm the allowed set.
+      Fix: added normalizeRole() in /api/users (POST+PUT) coercing any invalid role to
+      'officer'; updated the UI Role options to Officer/Viewer/Administrator (default
+      Officer). Real access is via RBAC groups, not this coarse field.
+- [x] E2E verified (throwaway email, cleaned up): CREATE -> 200 linked:false;
+      same email again -> 200 linked:true; DELETE -> 200. PASS.
+- [x] tsc 0 errors; clean production build; server 200; Version 27.
+- [ ] User: hard-refresh, then create a user end-to-end to confirm in the UI.
 - [ ] Collaborative: user logs in and walks Groups/Modules/Users so I can fine-tune UX.
