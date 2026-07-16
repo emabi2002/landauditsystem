@@ -31,6 +31,8 @@ import {
   GitBranch,
   LifeBuoy,
   Code,
+  Network,
+  Contact,
 } from 'lucide-react'
 
 interface NavItem {
@@ -116,6 +118,8 @@ const navigationGroups: NavGroup[] = [
       { name: 'Groups', href: '/admin/groups', icon: Shield },
       { name: 'Modules', href: '/admin/modules', icon: Package },
       { name: 'Divisions', href: '/admin/divisions', icon: Building2 },
+      { name: 'Org Units', href: '/admin/org-units', icon: Network },
+      { name: 'Officers', href: '/admin/people', icon: Contact },
     ],
   },
 ]

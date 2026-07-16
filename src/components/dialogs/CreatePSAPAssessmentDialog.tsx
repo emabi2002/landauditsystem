@@ -24,23 +24,49 @@ import { Badge } from '@/components/ui/badge'
 import { createClientComponentClient } from '@/lib/supabase'
 import type { Database } from '@/lib/database.types'
 import { toast } from 'sonner'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Plus } from 'lucide-react'
 import { HelpTooltip } from '@/components/help/HelpTooltip'
 
 type PSAPStandard = Database['public']['Tables']['audit_psap_standards']['Row']
+
+interface AssessmentToEdit {
+  id: string
+  org_unit_id: string | null
+  financial_year: number
+  quarter: number | null
+  assessment_date: string
+  completed_by?: string | null
+  reviewed_by?: string | null
+  comments: string | null
+}
 
 interface CreatePSAPAssessmentDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
+  assessment?: AssessmentToEdit | null
+}
+
+/**
+ * PSAP standards are scored 0-100 (percent compliance). The overall score is a
+ * weighted average on a 0-100 scale (standard weights sum to 100), matching the
+ * `audit_psap_rating_scales` bands: Excellent >=90, Good >=75, Fair >=60, else Poor.
+ */
+function ratingForScore(score: number) {
+  if (score >= 90) return { label: 'Excellent', color: 'bg-green-600' }
+  if (score >= 75) return { label: 'Good', color: 'bg-lime-600' }
+  if (score >= 60) return { label: 'Fair', color: 'bg-yellow-500' }
+  return { label: 'Poor', color: 'bg-red-500' }
 }
 
 export function CreatePSAPAssessmentDialog({
   open,
   onOpenChange,
   onSuccess,
+  assessment,
 }: CreatePSAPAssessmentDialogProps) {
   const supabase = createClientComponentClient<Database>()
+  const isEdit = !!assessment
 
   const [loading, setLoading] = useState(false)
   const [standards, setStandards] = useState<PSAPStandard[]>([])
@@ -57,44 +83,64 @@ export function CreatePSAPAssessmentDialog({
   const [comments, setComments] = useState('')
   const [scores, setScores] = useState<Record<string, { score: number; comments: string }>>({})
 
+  // Inline quick-add state
+  const [addOrgOpen, setAddOrgOpen] = useState(false)
+  const [addPersonOpen, setAddPersonOpen] = useState(false)
+  const [newOrg, setNewOrg] = useState({ code: '', name: '', unit_type: 'Division' })
+  const [newPerson, setNewPerson] = useState({ full_name: '', email: '', role: '' })
+  const [savingInline, setSavingInline] = useState(false)
+
   useEffect(() => {
     if (open) {
       loadData()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   const loadData = async () => {
     try {
-      // Load PSAP standards
-      const { data: standardsData } = await supabase
-        .from('audit_psap_standards')
-        .select('*')
-        .order('standard_number')
+      const [{ data: standardsData }, { data: orgUnitsData }, { data: peopleData }] =
+        await Promise.all([
+          supabase.from('audit_psap_standards').select('*').order('standard_number'),
+          // FIX: org_units uses `is_active` (not `active`) — the old query 400'd,
+          // which left the Organization Unit dropdown permanently empty.
+          supabase.from('org_units').select('*').eq('is_active', true).order('name'),
+          supabase.from('people').select('*').eq('active', true).order('full_name'),
+        ])
 
-      // Load org units
-      const { data: orgUnitsData } = await supabase
-        .from('org_units')
-        .select('*')
-        .eq('active', true)
-        .order('name')
+      const stds = (standardsData as PSAPStandard[]) || []
+      setStandards(stds)
+      setOrgUnits((orgUnitsData as any[]) || [])
+      setPeople((peopleData as any[]) || [])
 
-      // Load people
-      const { data: peopleData } = await supabase
-        .from('people')
-        .select('*')
-        .eq('active', true)
-        .order('full_name')
-
-      if (standardsData) setStandards(standardsData)
-      if (orgUnitsData) setOrgUnits(orgUnitsData)
-      if (peopleData) setPeople(peopleData)
-
-      // Initialize scores
-      const initialScores: Record<string, { score: number; comments: string }> = {}
-      ;(standardsData as any[] || []).forEach((std: any) => {
-        initialScores[std.id] = { score: 0, comments: '' }
-      })
-      setScores(initialScores)
+      if (isEdit && assessment) {
+        // Pre-fill header
+        setOrgUnitId(assessment.org_unit_id || '')
+        setFinancialYear(String(assessment.financial_year))
+        setQuarter(String(assessment.quarter ?? 1))
+        setAssessmentDate(assessment.assessment_date?.split('T')[0] || assessmentDate)
+        setCompletedBy(assessment.completed_by || '')
+        setReviewedBy(assessment.reviewed_by || 'none')
+        setComments(assessment.comments || '')
+        // Load existing scores
+        const { data: existingScores } = await supabase
+          .from('audit_psap_assessment_scores')
+          .select('psap_standard_id, raw_score, comments')
+          .eq('psap_assessment_id', assessment.id)
+        const map: Record<string, { score: number; comments: string }> = {}
+        for (const std of stds) map[std.id] = { score: 0, comments: '' }
+        for (const s of (existingScores as any[]) || []) {
+          map[s.psap_standard_id] = {
+            score: Number(s.raw_score) || 0,
+            comments: s.comments || '',
+          }
+        }
+        setScores(map)
+      } else {
+        const initial: Record<string, { score: number; comments: string }> = {}
+        for (const std of stds) initial[std.id] = { score: 0, comments: '' }
+        setScores(initial)
+      }
     } catch (error) {
       console.error('Error loading data:', error)
       toast.error('Failed to load form data')
@@ -102,99 +148,188 @@ export function CreatePSAPAssessmentDialog({
   }
 
   const handleScoreChange = (standardId: string, value: string) => {
-    const score = Math.max(0, Math.min(10, parseFloat(value) || 0))
-    setScores(prev => ({
-      ...prev,
-      [standardId]: { ...prev[standardId], score }
-    }))
+    const score = Math.max(0, Math.min(100, parseFloat(value) || 0))
+    setScores((prev) => ({ ...prev, [standardId]: { ...prev[standardId], score } }))
   }
 
-  const handleScoreCommentChange = (standardId: string, value: string) => {
-    setScores(prev => ({
-      ...prev,
-      [standardId]: { ...prev[standardId], comments: value }
-    }))
-  }
+  const totalWeight = standards.reduce((sum, s) => sum + (Number(s.weight) || 0), 0) || 1
 
-  const calculateTotalScore = () => {
+  const calculateOverall = () => {
     let total = 0
-    standards.forEach(std => {
+    for (const std of standards) {
       const score = scores[std.id]?.score || 0
-      total += score * std.weight
-    })
-    return total.toFixed(2)
+      total += score * (Number(std.weight) || 0)
+    }
+    return total / totalWeight // weighted average, 0-100
   }
 
-  const getRatingForScore = (score: number) => {
-    if (score >= 18.0) return { label: 'Full Compliance', color: 'bg-green-500' }
-    if (score >= 15.0) return { label: 'Substantial Compliance', color: 'bg-lime-500' }
-    if (score >= 12.0) return { label: 'Partial Compliance', color: 'bg-yellow-500' }
-    if (score >= 9.0) return { label: 'Low Compliance', color: 'bg-orange-500' }
-    return { label: 'Non-Compliance', color: 'bg-red-500' }
+  const overall = calculateOverall()
+  const rating = ratingForScore(overall)
+
+  const handleQuickAddOrg = async () => {
+    if (!newOrg.code.trim() || !newOrg.name.trim()) {
+      toast.error('Org unit code and name are required')
+      return
+    }
+    setSavingInline(true)
+    try {
+      const { data, error } = await supabase
+        .from('org_units')
+        .insert({
+          code: newOrg.code.toUpperCase().trim(),
+          name: newOrg.name.trim(),
+          unit_type: newOrg.unit_type || 'Division',
+          is_active: true,
+        } as any)
+        .select()
+        .single()
+      if (error) throw error
+      toast.success('Organization unit added')
+      setOrgUnits((prev) => [...prev, data].sort((a, b) => (a.name || '').localeCompare(b.name || '')))
+      setOrgUnitId((data as any).id)
+      setNewOrg({ code: '', name: '', unit_type: 'Division' })
+      setAddOrgOpen(false)
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to add organization unit')
+    } finally {
+      setSavingInline(false)
+    }
+  }
+
+  const handleQuickAddPerson = async () => {
+    if (!newPerson.full_name.trim()) {
+      toast.error('Person name is required')
+      return
+    }
+    setSavingInline(true)
+    try {
+      const { data, error } = await supabase
+        .from('people')
+        .insert({
+          full_name: newPerson.full_name.trim(),
+          email: newPerson.email.trim() || null,
+          role: newPerson.role.trim() || null,
+          active: true,
+        } as any)
+        .select()
+        .single()
+      if (error) throw error
+      toast.success('Person added')
+      setPeople((prev) =>
+        [...prev, data].sort((a, b) => (a.full_name || '').localeCompare(b.full_name || '')),
+      )
+      setCompletedBy((data as any).id)
+      setNewPerson({ full_name: '', email: '', role: '' })
+      setAddPersonOpen(false)
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to add person')
+    } finally {
+      setSavingInline(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!orgUnitId || !completedBy) {
-      toast.error('Please fill in all required fields')
+      toast.error('Please select an Organization Unit and who Completed the assessment')
       return
     }
 
     setLoading(true)
     try {
-      // Create assessment
-      const { data: assessment, error: assessmentError } = await supabase
-        .from('audit_psap_assessments')
-        .insert({
-          org_unit_id: orgUnitId,
-          financial_year: parseInt(financialYear),
-          quarter: parseInt(quarter),
-          assessment_date: assessmentDate,
-          completed_by: completedBy,
-          reviewed_by: (reviewedBy && reviewedBy !== 'none') ? reviewedBy : null,
-          comments: comments || null,
-        } as any)
-        .select()
-        .single()
+      const overallScore = Number(calculateOverall().toFixed(2))
+      const overallRating = ratingForScore(overallScore).label
 
-      if (assessmentError) throw assessmentError
+      let assessmentId = assessment?.id
 
-      // Create scores
-      const scoreInserts = (standards as any[]).map((std: any) => ({
-        psap_assessment_id: (assessment as any)?.id,
-        psap_standard_id: std.id,
-        raw_score: scores[std.id]?.score || 0,
-        comments: scores[std.id]?.comments || null,
-      }))
+      if (isEdit && assessmentId) {
+        const { error: updErr } = await supabase
+          .from('audit_psap_assessments')
+          .update({
+            org_unit_id: orgUnitId,
+            financial_year: parseInt(financialYear),
+            quarter: parseInt(quarter),
+            assessment_date: assessmentDate,
+            completed_by: completedBy,
+            reviewed_by: reviewedBy && reviewedBy !== 'none' ? reviewedBy : null,
+            comments: comments || null,
+            overall_score: overallScore,
+            overall_rating: overallRating,
+            updated_at: new Date().toISOString(),
+          } as any)
+          .eq('id', assessmentId)
+        if (updErr) throw updErr
+        // Replace scores
+        await supabase
+          .from('audit_psap_assessment_scores')
+          .delete()
+          .eq('psap_assessment_id', assessmentId)
+      } else {
+        const { data: created, error: insErr } = await supabase
+          .from('audit_psap_assessments')
+          .insert({
+            org_unit_id: orgUnitId,
+            financial_year: parseInt(financialYear),
+            quarter: parseInt(quarter),
+            assessment_date: assessmentDate,
+            completed_by: completedBy,
+            reviewed_by: reviewedBy && reviewedBy !== 'none' ? reviewedBy : null,
+            comments: comments || null,
+          } as any)
+          .select()
+          .single()
+        if (insErr) throw insErr
+        assessmentId = (created as any)?.id
+      }
 
+      if (!assessmentId) {
+        throw new Error('Could not determine the assessment to save scores against')
+      }
+
+      // Insert scores (raw_score 0-100 + weighted contribution to the 0-100 total)
+      const scoreInserts = standards.map((std) => {
+        const raw = scores[std.id]?.score || 0
+        return {
+          psap_assessment_id: assessmentId,
+          psap_standard_id: std.id,
+          raw_score: raw,
+          weighted_score: Number((raw * ((Number(std.weight) || 0) / totalWeight)).toFixed(2)),
+          comments: scores[std.id]?.comments || null,
+        }
+      })
       const { error: scoresError } = await supabase
         .from('audit_psap_assessment_scores')
         .insert(scoreInserts as any)
-
       if (scoresError) throw scoresError
 
-      toast.success('PSAP Assessment created successfully')
+      // A DB trigger recomputes overall_score from raw scores on a different
+      // scale; re-apply our correct 0-100 value via a parent UPDATE (the trigger
+      // fires on the scores table, not on this update, so it sticks).
+      await supabase
+        .from('audit_psap_assessments')
+        .update({ overall_score: overallScore, overall_rating: overallRating } as any)
+        .eq('id', assessmentId)
+
+      toast.success(isEdit ? 'PSAP assessment updated' : 'PSAP assessment created')
       onOpenChange(false)
       onSuccess?.()
     } catch (error: any) {
-      console.error('Error creating assessment:', error)
-      toast.error(error.message || 'Failed to create assessment')
+      console.error('Error saving assessment:', error)
+      toast.error(error.message || 'Failed to save assessment')
     } finally {
       setLoading(false)
     }
   }
 
-  const totalScore = parseFloat(calculateTotalScore())
-  const rating = getRatingForScore(totalScore)
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create PSAP Assessment</DialogTitle>
+          <DialogTitle>{isEdit ? 'Edit PSAP Assessment' : 'Create PSAP Assessment'}</DialogTitle>
           <DialogDescription>
-            Complete the quarterly PSAP Financial & Governance Standards assessment
+            Complete the quarterly PSAP Financial &amp; Governance Standards assessment. Each
+            standard is scored 0-100; the overall is a weighted average.
           </DialogDescription>
         </DialogHeader>
 
@@ -202,17 +337,34 @@ export function CreatePSAPAssessmentDialog({
           {/* Header Information */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="orgUnit">Organization Unit *</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="orgUnit">Organization Unit *</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs text-emerald-700 hover:text-emerald-800"
+                  onClick={() => setAddOrgOpen(true)}
+                >
+                  <Plus className="mr-1 h-3 w-3" /> New
+                </Button>
+              </div>
               <Select value={orgUnitId} onValueChange={setOrgUnitId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select org unit" />
                 </SelectTrigger>
                 <SelectContent>
-                  {orgUnits.map(unit => (
-                    <SelectItem key={unit.id} value={unit.id}>
-                      {unit.name}
-                    </SelectItem>
-                  ))}
+                  {orgUnits.length === 0 ? (
+                    <div className="px-2 py-1.5 text-sm text-slate-500">
+                      No org units — click “New”.
+                    </div>
+                  ) : (
+                    orgUnits.map((unit) => (
+                      <SelectItem key={unit.id} value={unit.id}>
+                        {unit.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -224,7 +376,7 @@ export function CreatePSAPAssessmentDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {[2024, 2025, 2026].map(year => (
+                  {[2024, 2025, 2026, 2027].map((year) => (
                     <SelectItem key={year} value={year.toString()}>
                       {year}
                     </SelectItem>
@@ -243,7 +395,7 @@ export function CreatePSAPAssessmentDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {[1, 2, 3, 4].map(q => (
+                  {[1, 2, 3, 4].map((q) => (
                     <SelectItem key={q} value={q.toString()}>
                       Q{q}
                     </SelectItem>
@@ -262,17 +414,34 @@ export function CreatePSAPAssessmentDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="completedBy">Completed By *</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="completedBy">Completed By *</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs text-emerald-700 hover:text-emerald-800"
+                  onClick={() => setAddPersonOpen(true)}
+                >
+                  <Plus className="mr-1 h-3 w-3" /> New
+                </Button>
+              </div>
               <Select value={completedBy} onValueChange={setCompletedBy}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select person" />
                 </SelectTrigger>
                 <SelectContent>
-                  {people.map(person => (
-                    <SelectItem key={person.id} value={person.id}>
-                      {person.full_name}
-                    </SelectItem>
-                  ))}
+                  {people.length === 0 ? (
+                    <div className="px-2 py-1.5 text-sm text-slate-500">
+                      No people — click “New”.
+                    </div>
+                  ) : (
+                    people.map((person) => (
+                      <SelectItem key={person.id} value={person.id}>
+                        {person.full_name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -285,7 +454,7 @@ export function CreatePSAPAssessmentDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">None</SelectItem>
-                  {people.map(person => (
+                  {people.map((person) => (
                     <SelectItem key={person.id} value={person.id}>
                       {person.full_name}
                     </SelectItem>
@@ -299,12 +468,10 @@ export function CreatePSAPAssessmentDialog({
           <div className="p-4 border rounded-lg bg-slate-50">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-600">Overall Score</p>
-                <p className="text-2xl font-bold">{totalScore} / 20.0</p>
+                <p className="text-sm text-slate-600">Overall Score (weighted average)</p>
+                <p className="text-2xl font-bold">{overall.toFixed(2)} / 100</p>
               </div>
-              <Badge className={rating.color}>
-                {rating.label}
-              </Badge>
+              <Badge className={rating.color}>{rating.label}</Badge>
             </div>
           </div>
 
@@ -322,14 +489,12 @@ export function CreatePSAPAssessmentDialog({
                       <th className="text-left p-2 text-sm font-medium">#</th>
                       <th className="text-left p-2 text-sm font-medium">Standard</th>
                       <th className="text-center p-2 text-sm font-medium">Weight</th>
-                      <th className="text-center p-2 text-sm font-medium">Score (0-10)</th>
-                      <th className="text-center p-2 text-sm font-medium">Weighted</th>
+                      <th className="text-center p-2 text-sm font-medium">Score (0-100)</th>
                     </tr>
                   </thead>
                   <tbody>
                     {standards.map((standard) => {
-                      const score = scores[standard.id]?.score || 0
-                      const weighted = (score * standard.weight).toFixed(2)
+                      const score = scores[standard.id]?.score ?? 0
                       return (
                         <tr key={standard.id} className="border-t">
                           <td className="p-2 text-sm">{standard.standard_number}</td>
@@ -342,14 +507,13 @@ export function CreatePSAPAssessmentDialog({
                             <Input
                               type="number"
                               min="0"
-                              max="10"
-                              step="0.1"
+                              max="100"
+                              step="1"
                               value={score}
                               onChange={(e) => handleScoreChange(standard.id, e.target.value)}
-                              className="w-20 text-center"
+                              className="w-24 text-center"
                             />
                           </td>
-                          <td className="p-2 text-center font-mono text-sm">{weighted}</td>
                         </tr>
                       )
                     })}
@@ -372,20 +536,120 @@ export function CreatePSAPAssessmentDialog({
           </div>
 
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={loading}
-            >
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="bg-emerald-600 hover:bg-emerald-700">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Assessment
+              {isEdit ? 'Save Changes' : 'Create Assessment'}
             </Button>
           </DialogFooter>
         </form>
+
+        {/* Inline: Add Organization Unit */}
+        <Dialog open={addOrgOpen} onOpenChange={setAddOrgOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>New Organization Unit</DialogTitle>
+              <DialogDescription>Add a unit that can be assessed.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Code *</Label>
+                  <Input
+                    placeholder="e.g. LTR"
+                    value={newOrg.code}
+                    onChange={(e) => setNewOrg({ ...newOrg, code: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Type</Label>
+                  <Select
+                    value={newOrg.unit_type}
+                    onValueChange={(v) => setNewOrg({ ...newOrg, unit_type: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {['Division', 'Section', 'Unit', 'Branch', 'Office'].map((t) => (
+                        <SelectItem key={t} value={t}>
+                          {t}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Name *</Label>
+                <Input
+                  placeholder="e.g. Land Titles Registry"
+                  value={newOrg.name}
+                  onChange={(e) => setNewOrg({ ...newOrg, name: e.target.value })}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setAddOrgOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={handleQuickAddOrg} disabled={savingInline}>
+                {savingInline && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Add Unit
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Inline: Add Person */}
+        <Dialog open={addPersonOpen} onOpenChange={setAddPersonOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>New Officer / Person</DialogTitle>
+              <DialogDescription>Add someone who can complete or review assessments.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Full Name *</Label>
+                <Input
+                  placeholder="e.g. Jane Doe"
+                  value={newPerson.full_name}
+                  onChange={(e) => setNewPerson({ ...newPerson, full_name: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input
+                    type="email"
+                    placeholder="jane@dlpp.gov.pg"
+                    value={newPerson.email}
+                    onChange={(e) => setNewPerson({ ...newPerson, email: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Role</Label>
+                  <Input
+                    placeholder="e.g. Senior Auditor"
+                    value={newPerson.role}
+                    onChange={(e) => setNewPerson({ ...newPerson, role: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setAddPersonOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={handleQuickAddPerson} disabled={savingInline}>
+                {savingInline && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Add Person
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </DialogContent>
     </Dialog>
   )

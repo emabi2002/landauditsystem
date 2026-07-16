@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Target, CheckCircle, Clock, XCircle, Download } from 'lucide-react'
+import { Plus, Target, CheckCircle, Clock, XCircle, Download, Pencil, Trash2, ListTree } from 'lucide-react'
+import { toast } from 'sonner'
 import { PageHeader, PageContainer } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { exportToCSV } from '@/lib/utils/export'
@@ -10,6 +11,8 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useKRAs } from '@/lib/hooks/useKRAs'
 import { UpdateKRAStatusDialog } from '@/components/dialogs/UpdateKRAStatusDialog'
+import { CreateKRADialog, type KRAToEdit } from '@/components/dialogs/CreateKRADialog'
+import { ManageKRAActivitiesDialog } from '@/components/dialogs/ManageKRAActivitiesDialog'
 import { KRATrendChart } from '@/components/charts/KRATrendChart'
 import {
   Table,
@@ -29,14 +32,28 @@ import {
 import { HelpTooltip } from '@/components/help/HelpTooltip'
 
 export default function KRAWorkplanPage() {
-  const { kras, loading, fetchKRAs, fetchKRAStatusSummary } = useKRAs()
+  const { kras, loading, fetchKRAs, fetchKRAStatusSummary, deleteKRA } = useKRAs()
   const [statusSummary, setStatusSummary] = useState<any[]>([])
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString())
   const [selectedQuarter, setSelectedQuarter] = useState<string>('1')
   const [statusDialogOpen, setStatusDialogOpen] = useState(false)
+  const [kraDialogOpen, setKraDialogOpen] = useState(false)
+  const [editingKRA, setEditingKRA] = useState<KRAToEdit | null>(null)
+  const [activitiesKRA, setActivitiesKRA] = useState<{ id: string; kra_code: string; kra_title: string } | null>(null)
 
   const handleStatusUpdated = () => {
     loadStatusSummary()
+  }
+
+  const handleDeleteKRA = async (kra: any) => {
+    if (!confirm(`Delete KRA "${kra.kra_code} — ${kra.kra_title}"? This removes its activities and statuses.`)) return
+    const { error } = await deleteKRA(kra.id)
+    if (error) {
+      toast.error(error)
+    } else {
+      toast.success('KRA deleted')
+      loadStatusSummary()
+    }
   }
 
   const handleExportStatus = () => {
@@ -112,7 +129,14 @@ export default function KRAWorkplanPage() {
         subtitle="Key Result Areas and quarterly workplan tracking"
         actions={
           <div className="flex items-center gap-1.5">
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setEditingKRA(null)
+                setKraDialogOpen(true)
+              }}
+            >
               <Plus className="mr-2 h-4 w-4" />
               New KRA
             </Button>
@@ -329,6 +353,7 @@ export default function KRAWorkplanPage() {
                       <TableHead>KRA Title</TableHead>
                       <TableHead>Purpose</TableHead>
                       <TableHead>Period</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -347,6 +372,52 @@ export default function KRAWorkplanPage() {
                         <TableCell>
                           {kra.start_year} - {kra.end_year || 'Ongoing'}
                         </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title="Manage activities"
+                              onClick={() =>
+                                setActivitiesKRA({
+                                  id: kra.id,
+                                  kra_code: kra.kra_code,
+                                  kra_title: kra.kra_title,
+                                })
+                              }
+                            >
+                              <ListTree className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title="Edit KRA"
+                              onClick={() => {
+                                setEditingKRA({
+                                  id: kra.id,
+                                  org_unit_id: (kra as any).org_unit_id ?? null,
+                                  kra_code: kra.kra_code,
+                                  kra_title: kra.kra_title,
+                                  purpose: kra.purpose ?? null,
+                                  start_year: kra.start_year,
+                                  end_year: kra.end_year ?? null,
+                                })
+                                setKraDialogOpen(true)
+                              }}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-600 hover:text-red-700"
+                              title="Delete KRA"
+                              onClick={() => handleDeleteKRA(kra)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -362,48 +433,32 @@ export default function KRAWorkplanPage() {
         </TabsContent>
       </Tabs>
 
-      {/* KRA Activity Examples */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Sample KRA Activities</CardTitle>
-          <CardDescription>
-            Example activities from Governance & Compliance Unit KRA
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2 text-sm">
-            <div className="flex items-start gap-2">
-              <Badge variant="outline" className="mt-0.5">a)</Badge>
-              <p>Conduct DLPP audits and investigations</p>
-            </div>
-            <div className="flex items-start gap-2">
-              <Badge variant="outline" className="mt-0.5">b)</Badge>
-              <p>Validate the reliability and integrity of information being reported</p>
-            </div>
-            <div className="flex items-start gap-2">
-              <Badge variant="outline" className="mt-0.5">c)</Badge>
-              <p>Monitor corporate compliance with policies, procedures, laws, and regulations</p>
-            </div>
-            <div className="flex items-start gap-2">
-              <Badge variant="outline" className="mt-0.5">d)</Badge>
-              <p>Safeguard intellectual and physical assets</p>
-            </div>
-            <div className="flex items-start gap-2">
-              <Badge variant="outline" className="mt-0.5">e)</Badge>
-              <p>Assess the economy, efficiency, and effectiveness of DLPP programs and operations</p>
-            </div>
-            <div className="flex items-start gap-2">
-              <Badge variant="outline" className="mt-0.5">f)</Badge>
-              <p>Advise management on risk management, internal control, and governance</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       <UpdateKRAStatusDialog
         open={statusDialogOpen}
         onOpenChange={setStatusDialogOpen}
         onSuccess={handleStatusUpdated}
+      />
+
+      <CreateKRADialog
+        open={kraDialogOpen}
+        onOpenChange={(o) => {
+          setKraDialogOpen(o)
+          if (!o) setEditingKRA(null)
+        }}
+        onSuccess={() => {
+          fetchKRAs()
+          loadStatusSummary()
+        }}
+        kra={editingKRA}
+      />
+
+      <ManageKRAActivitiesDialog
+        open={!!activitiesKRA}
+        onOpenChange={(o) => {
+          if (!o) setActivitiesKRA(null)
+        }}
+        kra={activitiesKRA}
+        onChanged={() => loadStatusSummary()}
       />
         </div>
       </PageContainer>

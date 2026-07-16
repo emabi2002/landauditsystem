@@ -266,3 +266,75 @@ registered". Root-caused TWO issues via live E2E against the shared DB:
 - [x] tsc 0 errors; clean production build; server 200; Version 27.
 - [ ] User: hard-refresh, then create a user end-to-end to confirm in the UI.
 - [ ] Collaborative: user logs in and walks Groups/Modules/Users so I can fine-tune UX.
+
+## Fix: KRA & Workplan dialogs never opened (dead New KRA / Edit / Activities buttons) — DONE
+Reported implicitly via the attached kra-workplan/page.tsx.
+- [x] Root cause: the page IMPORTED CreateKRADialog + ManageKRAActivitiesDialog and
+      wired all their state (kraDialogOpen/editingKRA/activitiesKRA via the New KRA
+      button, the row Edit pencil, and the Manage-activities ListTree button), but
+      only `<UpdateKRAStatusDialog>` was actually rendered in the JSX. So clicking
+      New KRA / Edit KRA / Manage activities set state but nothing ever appeared.
+- [x] Rendered `<CreateKRADialog>` (create+edit, refreshes list + status on success)
+      and `<ManageKRAActivitiesDialog>` (open={!!activitiesKRA}) at the bottom of the page.
+- [x] Removed the hardcoded "Sample KRA Activities" placeholder card (fake a)–f)
+      list) now that each KRA has real, per-KRA activity management via the dialog.
+- [x] Also fixed a pre-existing tsc error in CreatePSAPAssessmentDialog.tsx
+      (.eq('id', assessmentId) where assessmentId was string|undefined) by adding a
+      guard after create/update so scores always save against a known id.
+- [x] tsc 0 errors; clean production build; server restarted; /, /login, /dashboard,
+      /kra-workplan, /psap-scorecard, /compliance, /admin/users all 200.
+- [ ] User: hard-refresh /kra-workplan, then click New KRA / a row's Edit / the
+      Activities (tree) icon to confirm each dialog now opens.
+- [x] E2E VERIFIED against live DB as a REAL authenticated user (temp user created +
+      deleted via service role; all test data cleaned up). Mirrored the exact dialog
+      queries:
+      - CreateKRADialog: org_units dropdown = 10 units; insert audit_strategic_kras OK;
+        reads back with org_units embed (org unit "Corporate Services").
+      - ManageKRAActivitiesDialog: inserted 2 audit_kra_activities; list = 2 rows.
+      - UpdateKRAStatusDialog: upsert audit_kra_activity_quarterly_status with
+        onConflict(kra_activity_id,financial_year,quarter) SUCCEEDED (the required
+        UNIQUE constraint EXISTS) + re-upsert edits in place with NO duplicates.
+      - useKRAs.fetchKRAStatusSummary nested join resolves the KRA (total/completed/
+        ongoing) + KRA title. RESULT: all operations PASSED. Authenticated RLS allows
+        the full flow, so a logged-in user gets the same result.
+
+## Fix: dead "Forgot password?" link on the login page — DONE
+- [x] Root cause: login page linked to /forgot-password but the route did not exist
+      -> Next's RSC prefetch of that link failed (visible runtime error) and clicking
+      it would 404.
+- [x] Created src/app/(auth)/forgot-password/page.tsx matching the DLPP login design
+      (same gradient, logo, colors). Uses supabase.auth.resetPasswordForEmail(email,
+      { redirectTo: `${origin}/login` }); shows a success state + "Back to sign in".
+- [x] tsc 0 errors; production build lists /forgot-password (3.18 kB); server 200 for
+      /login, /forgot-password, /kra-workplan, /dashboard; prefetch error resolved.
+
+## Live E2E: PSAP Scorecard + Compliance (as REAL authenticated user)
+- [x] COMPLIANCE: hit the real /api/compliance route (service-role) end-to-end:
+      GET -> POST obligation -> POST control(linked) -> PUT obligation -> GET(reflects)
+      -> DELETE control -> DELETE obligation -> GET(clean). ALL PASSED.
+- [x] PSAP: mirrored CreatePSAPAssessmentDialog + usePSAPAssessments.fetchAssessments
+      as an authenticated user. PASSED: 20 standards load; 10 org units; insert
+      audit_psap_assessments OK; insert 20 scores OK; overall_score persists (80/Good)
+      via the parent-UPDATE-after-trigger workaround; page fetch with named FK embeds
+      (audit_psap_assessments_completed_by_fkey / _reviewed_by_fkey) resolves; org_units
+      embed = "Corporate Services"; scores read back with standard titles.
+- [x] Also confirmed audit_psap_assessments has UNIQUE(org_unit_id,financial_year,
+      quarter) (a 2nd insert for a seeded period 409'd) -> the dialog should ideally
+      surface a friendly "assessment already exists for this unit/period" message.
+
+## BUG found by the PSAP E2E: `people` blocks the `authenticated` role
+- [x] Root cause (verified 3-way): people rows -> service_role=3, anon=3, AUTHENTICATED=0.
+      org_units got its authenticated RLS policy (012/013) but `people` was missed, so
+      after LOGIN: PSAP Completed/Reviewed-By dropdowns are EMPTY (completed_by is
+      required) AND Admin -> Officers is empty + CRUD fails. The PSAP assessment table
+      also shows the officer as N/A (completed_by_person embed returns null).
+- [x] Proved it's ONLY the people-RLS gap: seeded a person via service role, then as
+      authenticated the FULL PSAP create (assessment + 20 scores + overall + fetch)
+      succeeded; only completed_by_person name came back "(none)".
+- [x] Wrote migration `016_people_rls_authenticated.sql` (idempotent; permissive
+      anon+authenticated FOR ALL on people + defensively org_units; NOTIFY reload) —
+      same pattern as 013.
+- [ ] ACTION FOR USER: run `016_people_rls_authenticated.sql` in the Supabase SQL
+      Editor (I can't apply DDL: no DB password; MCP was on a different account).
+      After that, PSAP dropdowns + Admin Officers work for logged-in users. Then I can
+      re-run the PSAP E2E to confirm completed_by resolves.

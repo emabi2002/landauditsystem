@@ -146,10 +146,85 @@ export function useKRAs() {
     return { data, error: error?.message ?? null }
   }
 
+  const deleteKRA = async (id: string) => {
+    // Remove quarterly statuses + activities first (avoid FK errors), then the KRA.
+    const { data: acts } = await supabase
+      .from('audit_kra_activities')
+      .select('id')
+      .eq('strategic_kra_id', id)
+    const activityIds = ((acts as any[]) || []).map((a) => a.id)
+    if (activityIds.length > 0) {
+      await supabase
+        .from('audit_kra_activity_quarterly_status')
+        .delete()
+        .in('kra_activity_id', activityIds)
+      await supabase.from('audit_kra_activities').delete().eq('strategic_kra_id', id)
+    }
+    const { error } = await supabase.from('audit_strategic_kras').delete().eq('id', id)
+    if (!error) fetchKRAs()
+    return { error: error?.message ?? null }
+  }
+
+  // ---- KRA activities -------------------------------------------------------
+  const fetchActivities = async (strategicKraId?: string) => {
+    let query = supabase
+      .from('audit_kra_activities')
+      .select('*')
+      .order('activity_code', { ascending: true })
+    if (strategicKraId) query = query.eq('strategic_kra_id', strategicKraId)
+    const { data, error } = await query
+    return { data: (data as any[]) || [], error: error?.message ?? null }
+  }
+
+  const createActivity = async (activity: {
+    strategic_kra_id: string
+    activity_code?: string
+    description: string
+    measure?: string
+    baseline?: string
+    annual_target?: string
+  }) => {
+    const { data, error } = await supabase
+      .from('audit_kra_activities')
+      .insert(activity as any)
+      .select()
+      .single()
+    return { data, error: error?.message ?? null }
+  }
+
+  const updateActivity = async (id: string, updates: Record<string, unknown>) => {
+    const { data, error } = await supabase
+      .from('audit_kra_activities')
+      .update({ ...updates, updated_at: new Date().toISOString() } as any)
+      .eq('id', id)
+      .select()
+      .single()
+    return { data, error: error?.message ?? null }
+  }
+
+  const deleteActivity = async (id: string) => {
+    await supabase.from('audit_kra_activity_quarterly_status').delete().eq('kra_activity_id', id)
+    const { error } = await supabase.from('audit_kra_activities').delete().eq('id', id)
+    return { error: error?.message ?? null }
+  }
+
   useEffect(() => {
     fetchKRAs()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  return { kras, loading, error, fetchKRAs, fetchKRAStatusSummary, createKRA, updateKRA }
+  return {
+    kras,
+    loading,
+    error,
+    fetchKRAs,
+    fetchKRAStatusSummary,
+    createKRA,
+    updateKRA,
+    deleteKRA,
+    fetchActivities,
+    createActivity,
+    updateActivity,
+    deleteActivity,
+  }
 }

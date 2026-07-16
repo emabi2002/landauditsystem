@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, TrendingUp, Calendar, Award, Download } from 'lucide-react'
+import { Plus, TrendingUp, Calendar, Award, Download, Pencil, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { PageHeader, PageContainer } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -37,20 +38,41 @@ export default function PSAPScorecardPage() {
     fetchStandards,
     fetchRatingScales,
     fetchAssessments,
-    getRatingForScore
+    deleteAssessment,
   } = usePSAPAssessments()
 
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString())
   const [selectedQuarter, setSelectedQuarter] = useState<string>('all')
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [editingAssessment, setEditingAssessment] = useState<any>(null)
 
   useEffect(() => {
     fetchStandards()
     fetchRatingScales()
   }, [])
 
+  const refreshAssessments = () => {
+    fetchAssessments(
+      undefined,
+      parseInt(selectedYear),
+      selectedQuarter && selectedQuarter !== 'all' ? parseInt(selectedQuarter) : undefined,
+    )
+  }
+
   const handleAssessmentCreated = () => {
-    fetchAssessments(undefined, parseInt(selectedYear), selectedQuarter ? parseInt(selectedQuarter) : undefined)
+    refreshAssessments()
+  }
+
+  const handleDeleteAssessment = async (assessment: any) => {
+    const label = `${(assessment as any).org_units?.name || 'assessment'} — ${assessment.financial_year} Q${assessment.quarter}`
+    if (!confirm(`Delete PSAP assessment for ${label}? This also removes its standard scores.`)) return
+    const { error } = await deleteAssessment(assessment.id)
+    if (error) {
+      toast.error(error)
+    } else {
+      toast.success('Assessment deleted')
+      refreshAssessments()
+    }
   }
 
   const handleExportAssessments = () => {
@@ -70,16 +92,12 @@ export default function PSAPScorecardPage() {
   const getRatingColor = (rating: string | null) => {
     switch (rating) {
       case 'Excellent':
-        return 'bg-green-500'
+        return 'bg-green-600'
       case 'Good':
-        return 'bg-lime-500'
+        return 'bg-lime-600'
       case 'Fair':
         return 'bg-yellow-500'
       case 'Poor':
-        return 'bg-yellow-500'
-      case 'orange':
-        return 'bg-orange-500'
-      case 'red':
         return 'bg-red-500'
       default:
         return 'bg-gray-500'
@@ -115,7 +133,7 @@ export default function PSAPScorecardPage() {
         subtitle="20 PSAP standards quarterly assessment and compliance tracking"
         actions={
           <div className="flex items-center gap-1.5">
-            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setCreateDialogOpen(true)}>
+            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => { setEditingAssessment(null); setCreateDialogOpen(true) }}>
               <Plus className="mr-2 h-4 w-4" />
               New Assessment
             </Button>
@@ -145,7 +163,7 @@ export default function PSAPScorecardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{avgScore.toFixed(2)}</div>
-            <p className="text-xs text-slate-500">Out of 20.0</p>
+            <p className="text-xs text-slate-500">Out of 100</p>
           </CardContent>
         </Card>
 
@@ -158,7 +176,7 @@ export default function PSAPScorecardPage() {
             <div className="text-2xl font-bold">
               {assessments.filter(a => a.overall_rating === 'Excellent').length}
             </div>
-            <p className="text-xs text-slate-500">18.0 - 20.0 score</p>
+            <p className="text-xs text-slate-500">90 - 100 score</p>
           </CardContent>
         </Card>
 
@@ -255,6 +273,7 @@ export default function PSAPScorecardPage() {
                       <TableHead>Overall Score</TableHead>
                       <TableHead>Rating</TableHead>
                       <TableHead>Completed By</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -272,7 +291,7 @@ export default function PSAPScorecardPage() {
                           <span className="font-semibold">
                             {assessment.overall_score?.toFixed(2) || '0.00'}
                           </span>
-                          <span className="text-slate-400"> / 20.0</span>
+                          <span className="text-slate-400"> / 100</span>
                         </TableCell>
                         <TableCell>
                           {assessment.overall_rating ? (
@@ -285,6 +304,28 @@ export default function PSAPScorecardPage() {
                         </TableCell>
                         <TableCell>
                           {(assessment as any).completed_by_person?.full_name || 'N/A'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setEditingAssessment(assessment)
+                                setCreateDialogOpen(true)
+                              }}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-600 hover:text-red-700"
+                              onClick={() => handleDeleteAssessment(assessment)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -371,8 +412,12 @@ export default function PSAPScorecardPage() {
 
       <CreatePSAPAssessmentDialog
         open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
+        onOpenChange={(o) => {
+          setCreateDialogOpen(o)
+          if (!o) setEditingAssessment(null)
+        }}
         onSuccess={handleAssessmentCreated}
+        assessment={editingAssessment}
       />
         </div>
       </PageContainer>
