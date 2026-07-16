@@ -359,3 +359,33 @@ Reported implicitly via the attached kra-workplan/page.tsx.
       ("John Kaupa") in the assessments table (was N/A). Admin Officers now works too.
 - [x] PSAP dialog: raw 23505 unique-violation now shown as a friendly message naming
       the org unit + Q/year and telling the user to edit the existing assessment.
+
+## Live E2E: Risk Register + Risk Profiles (as authenticated user)
+Found a SYSTEMIC RLS gap + dialog/FK bugs; verified via authenticated vs service reads.
+- [x] RLS gap: an entire family of tables has anon policies but NO authenticated
+      policy, so after login they read 0 and writes fail with an RLS violation:
+      audit_divisions(10), audit_legal_instruments(13), audit_risk_register(22),
+      audit_risk_legal_references(25), audit_risk_audit_log(22), audit_categories(7),
+      audit_risk_events(17), audit_risk_event_risks(23), audit_risk_event_log(29)
+      + empty siblings (sections, business_processes, treatments, incidents,
+      indicators(+values), event_milestones/documents, tasks). Effect: Risk Register
+      + Risk Events pages empty after login; Create-Risk Division/Legal dropdowns
+      empty; "Add Risk" fails. (engagements/findings/recommendations already work.)
+- [x] Wrote migration `017_risk_register_rls_authenticated.sql` (idempotent; permissive
+      anon+authenticated FOR ALL on those 18 tables; NOTIFY reload).
+- [x] BUG: CreateRiskProfileDialog loaded org_units with .eq('active') (col is
+      is_active) -> Organization Unit dropdown empty -> risk profiles couldn't be
+      created (required field). FIXED -> .eq('is_active').
+- [x] BUG: risk_owner_id on audit_risk_profile_items references `people` (proved via
+      FK probe: people OK; org_unit/division/audit_user all FK-error), but
+      AddRiskItemDialog loaded org_units for the Risk Owner dropdown and useRiskProfiles
+      .fetchRiskProfileItems embedded risk_owner:org_units. FIXED both to use people
+      (dialog loads people.active; hook embeds people!..._risk_owner_id_fkey(full_name)).
+      (The /risk-profiles/[id] detail page already used the correct people embed.)
+- [x] Verified after fixes (authenticated): Risk Profiles create + add item + read-back
+      with people owner ("John Kaupa") all PASS. Risk Register still RLS-blocked until
+      the user runs 017. tsc 0 errors; clean build; risk routes 200.
+- [x] USER ran 017. RE-VERIFIED as authenticated: Risk Register reads 22 (was 0),
+      divisions 10, legal instruments 13, create risk + legal ref works, DB computes
+      residual rating, status update works. Risk Events reads 17 (was 0), categories 7,
+      create risk event (RE-2026-008) works. Both modules functional after login.

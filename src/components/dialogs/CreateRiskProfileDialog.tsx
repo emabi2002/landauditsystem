@@ -59,11 +59,11 @@ export function CreateRiskProfileDialog({
 
   const loadData = async () => {
     try {
-      // Load org units
+      // Load org units (org_units uses `is_active`, not `active`)
       const { data: orgUnitsData } = await supabase
         .from('org_units')
         .select('*')
-        .eq('active', true)
+        .eq('is_active', true)
         .order('name')
 
       // Load people

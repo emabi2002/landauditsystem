@@ -110,7 +110,7 @@ export function useRiskProfiles() {
         .from('audit_risk_profile_items')
         .select(`
           *,
-          risk_owner:org_units(name, code)
+          risk_owner_person:people!audit_risk_profile_items_risk_owner_id_fkey(full_name)
         `)
         .eq('risk_profile_id', profileId)
         .order('created_at', { ascending: true })

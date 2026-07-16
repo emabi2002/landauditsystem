@@ -58,7 +58,8 @@ export function AddRiskItemDialog({
   const supabase = createClientComponentClient<Database>()
 
   const [loading, setLoading] = useState(false)
-  const [orgUnits, setOrgUnits] = useState<any[]>([])
+  // Risk owner references `people` (FK audit_risk_profile_items_risk_owner_id_fkey)
+  const [people, setPeople] = useState<any[]>([])
 
   // Form state
   const [contextCategory, setContextCategory] = useState('')
@@ -74,21 +75,21 @@ export function AddRiskItemDialog({
 
   useEffect(() => {
     if (open) {
-      loadOrgUnits()
+      loadPeople()
     }
   }, [open])
 
-  const loadOrgUnits = async () => {
+  const loadPeople = async () => {
     try {
       const { data } = await supabase
-        .from('org_units')
+        .from('people')
         .select('*')
         .eq('active', true)
-        .order('name')
+        .order('full_name')
 
-      if (data) setOrgUnits(data)
+      if (data) setPeople(data)
     } catch (error) {
-      console.error('Error loading org units:', error)
+      console.error('Error loading people:', error)
     }
   }
 
@@ -313,9 +314,9 @@ export function AddRiskItemDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">None</SelectItem>
-                  {orgUnits.map(unit => (
-                    <SelectItem key={unit.id} value={unit.id}>
-                      {unit.name}
+                  {people.map(person => (
+                    <SelectItem key={person.id} value={person.id}>
+                      {person.full_name}
                     </SelectItem>
                   ))}
                 </SelectContent>
