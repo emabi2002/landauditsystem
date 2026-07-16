@@ -338,3 +338,24 @@ Reported implicitly via the attached kra-workplan/page.tsx.
       Editor (I can't apply DDL: no DB password; MCP was on a different account).
       After that, PSAP dropdowns + Admin Officers work for logged-in users. Then I can
       re-run the PSAP E2E to confirm completed_by resolves.
+
+## Git: re-established repo + pushed all uncommitted work
+- [x] .git was empty this session (container reset lost it); remote emabi2002/
+      landauditsystem still had history (origin/main was at 1ffe354).
+- [x] Re-init + remote add + fetch + `git reset --mixed origin/main` (kept working
+      tree). Revealed the ENTIRE governance-CRUD feature set was never committed
+      before the repo was lost (compliance page/api/hook, org-units + people admin
+      pages, CreateKRADialog, ManageKRAActivitiesDialog, useKRAs rewrite, PSAP dialog),
+      plus this session's KRA dialog fix + forgot-password + migration 016.
+- [x] Committed all 16 files as 7a3d0b4 (no .env staged) and pushed main
+      1ffe354..7a3d0b4 using a user-provided PAT passed INLINE (not persisted:
+      remote url is clean, 0 token refs in .git/config).
+- [ ] SECURITY: the PAT was shared in plaintext in chat — user should ROTATE/REVOKE it.
+
+## Migration 016 APPLIED & VERIFIED (user ran it) + PSAP friendly duplicate msg
+- [x] User ran 016 in the SQL Editor. Re-verified E2E as an authenticated user:
+      people read = 3 (was 0); inline "Add Person" INSERT works; full PSAP create
+      (assessment + 20 scores) OK; the named-FK embed now resolves the officer name
+      ("John Kaupa") in the assessments table (was N/A). Admin Officers now works too.
+- [x] PSAP dialog: raw 23505 unique-violation now shown as a friendly message naming
+      the org unit + Q/year and telling the user to edit the existing assessment.

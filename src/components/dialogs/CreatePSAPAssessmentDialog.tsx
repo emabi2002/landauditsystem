@@ -316,7 +316,21 @@ export function CreatePSAPAssessmentDialog({
       onSuccess?.()
     } catch (error: any) {
       console.error('Error saving assessment:', error)
-      toast.error(error.message || 'Failed to save assessment')
+      const msg = String(error?.message || '')
+      // The table has a UNIQUE(org_unit_id, financial_year, quarter) constraint.
+      // Turn the raw Postgres 23505 error into a friendly, actionable message.
+      const isDuplicate =
+        error?.code === '23505' ||
+        /duplicate key|already exists|org_unit_id_financial_year_quarter/i.test(msg)
+      if (isDuplicate) {
+        const unitName =
+          orgUnits.find((u) => u.id === orgUnitId)?.name || 'this organization unit'
+        toast.error(
+          `An assessment for ${unitName} already exists for Q${quarter} ${financialYear}. Open it from the list to edit instead.`,
+        )
+      } else {
+        toast.error(msg || 'Failed to save assessment')
+      }
     } finally {
       setLoading(false)
     }
