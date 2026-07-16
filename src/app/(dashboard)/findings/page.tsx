@@ -30,7 +30,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { Plus, Search, Edit, Trash2, Loader2, AlertTriangle, CheckCircle, Clock } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, Loader2, AlertTriangle, CheckCircle, Clock, ListChecks } from 'lucide-react'
 import { PageHeader, PageContainer } from '@/components/layout/PageHeader'
 import { HelpTooltip } from '@/components/help/HelpTooltip'
 import { useFindings } from '@/lib/hooks/useFindings'
@@ -61,6 +61,21 @@ interface EngagementLite {
   title: string
 }
 
+interface RecLite {
+  id: string
+  finding_id: string | null
+  recommendation_text: string
+  priority: string
+  status: string
+}
+
+const recPriorityColors: Record<string, string> = {
+  Low: 'bg-green-100 text-green-700',
+  Medium: 'bg-yellow-100 text-yellow-700',
+  High: 'bg-orange-100 text-orange-700',
+  Critical: 'bg-red-100 text-red-700',
+}
+
 const emptyForm = {
   engagement_id: '',
   title: '',
@@ -77,12 +92,14 @@ export default function FindingsPage() {
   const supabase = createClientComponentClient<Database>()
 
   const [engagements, setEngagements] = useState<EngagementLite[]>([])
+  const [recs, setRecs] = useState<RecLite[]>([])
   const [search, setSearch] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Finding | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Finding | null>(null)
+  const [viewLinks, setViewLinks] = useState<Finding | null>(null)
   const [form, setForm] = useState({ ...emptyForm })
 
   useEffect(() => {
@@ -91,11 +108,17 @@ export default function FindingsPage() {
       .select('id, title')
       .order('created_at', { ascending: false })
       .then(({ data }) => setEngagements((data as EngagementLite[]) || []))
+    supabase
+      .from('audit_recommendations')
+      .select('id, finding_id, recommendation_text, priority, status')
+      .then(({ data }) => setRecs((data as RecLite[]) || []))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [findings])
 
   const engagementTitle = (id: string | null) =>
     id ? engagements.find((e) => e.id === id)?.title || '—' : '—'
+
+  const recsFor = (findingId: string) => recs.filter((r) => r.finding_id === findingId)
 
   const openCreate = () => {
     setEditing(null)
@@ -257,6 +280,7 @@ export default function FindingsPage() {
                     <TableHead className="font-semibold">Engagement</TableHead>
                     <TableHead className="font-semibold">Risk Rating</TableHead>
                     <TableHead className="font-semibold">Status</TableHead>
+                    <TableHead className="font-semibold text-center">Recommendations</TableHead>
                     <TableHead className="font-semibold">Created</TableHead>
                     <TableHead className="font-semibold text-right">Actions</TableHead>
                   </TableRow>
@@ -282,6 +306,17 @@ export default function FindingsPage() {
                         <Badge className={statusColors[f.status] || 'bg-slate-100 text-slate-700'}>
                           {f.status}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <button
+                          type="button"
+                          onClick={() => setViewLinks(f)}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700"
+                          title="View linked recommendations"
+                        >
+                          <ListChecks className="h-3.5 w-3.5" />
+                          {recsFor(f.id).length}
+                        </button>
                       </TableCell>
                       <TableCell className="text-sm text-slate-600">
                         {f.created_at ? format(new Date(f.created_at), 'MMM d, yyyy') : '—'}
@@ -458,6 +493,40 @@ export default function FindingsPage() {
               Delete
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Linked recommendations */}
+      <Dialog open={!!viewLinks} onOpenChange={(o) => !o && setViewLinks(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ListChecks className="h-5 w-5 text-emerald-600" />
+              Recommendations
+            </DialogTitle>
+            <DialogDescription className="line-clamp-2">{viewLinks?.title}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+            {viewLinks && recsFor(viewLinks.id).length === 0 ? (
+              <div className="text-center py-8 text-slate-500 text-sm border rounded-lg">
+                No recommendations linked to this finding yet.
+                <p className="mt-1 text-xs">Create one on the Recommendations page and select this finding.</p>
+              </div>
+            ) : (
+              viewLinks &&
+              recsFor(viewLinks.id).map((r) => (
+                <div key={r.id} className="rounded-lg border p-3">
+                  <p className="text-sm font-medium line-clamp-2">{r.recommendation_text}</p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <Badge className={recPriorityColors[r.priority] || 'bg-slate-100 text-slate-700'}>
+                      {r.priority}
+                    </Badge>
+                    <Badge variant="outline">{r.status}</Badge>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </>

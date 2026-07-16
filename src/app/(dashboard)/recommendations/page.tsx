@@ -30,7 +30,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { Plus, Search, Edit, Trash2, Loader2, CheckCircle, Send, ListChecks } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, Loader2, CheckCircle, Send, ListChecks, ClipboardCheck } from 'lucide-react'
 import { PageHeader, PageContainer } from '@/components/layout/PageHeader'
 import { HelpTooltip } from '@/components/help/HelpTooltip'
 import { useRecommendations } from '@/lib/hooks/useRecommendations'
@@ -62,6 +62,21 @@ interface FindingLite {
   title: string
 }
 
+interface PlanLite {
+  id: string
+  recommendation_id: string | null
+  planned_action: string
+  progress_percentage: number
+  status: string
+}
+
+const apStatusColors: Record<string, string> = {
+  'Not Started': 'bg-slate-100 text-slate-700',
+  'In Progress': 'bg-blue-100 text-blue-700',
+  Completed: 'bg-green-100 text-green-700',
+  Overdue: 'bg-red-100 text-red-700',
+}
+
 const emptyForm = {
   finding_id: '',
   recommendation_text: '',
@@ -76,12 +91,14 @@ export default function RecommendationsPage() {
   const supabase = createClientComponentClient<Database>()
 
   const [findings, setFindings] = useState<FindingLite[]>([])
+  const [plans, setPlans] = useState<PlanLite[]>([])
   const [search, setSearch] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Recommendation | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Recommendation | null>(null)
+  const [viewLinks, setViewLinks] = useState<Recommendation | null>(null)
   const [form, setForm] = useState({ ...emptyForm })
 
   useEffect(() => {
@@ -90,11 +107,17 @@ export default function RecommendationsPage() {
       .select('id, title')
       .order('created_at', { ascending: false })
       .then(({ data }) => setFindings((data as FindingLite[]) || []))
+    supabase
+      .from('audit_action_plans')
+      .select('id, recommendation_id, planned_action, progress_percentage, status')
+      .then(({ data }) => setPlans((data as PlanLite[]) || []))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [recommendations])
 
   const findingTitle = (id: string | null) =>
     id ? findings.find((f) => f.id === id)?.title || '—' : '—'
+
+  const plansFor = (recId: string) => plans.filter((p) => p.recommendation_id === recId)
 
   const openCreate = () => {
     setEditing(null)
@@ -256,6 +279,7 @@ export default function RecommendationsPage() {
                     <TableHead className="font-semibold">Finding</TableHead>
                     <TableHead className="font-semibold">Priority</TableHead>
                     <TableHead className="font-semibold">Status</TableHead>
+                    <TableHead className="font-semibold text-center">Action Plans</TableHead>
                     <TableHead className="font-semibold">Target Date</TableHead>
                     <TableHead className="font-semibold text-right">Actions</TableHead>
                   </TableRow>
@@ -278,6 +302,17 @@ export default function RecommendationsPage() {
                         <Badge className={statusColors[r.status] || 'bg-slate-100 text-slate-700'}>
                           {r.status}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <button
+                          type="button"
+                          onClick={() => setViewLinks(r)}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700"
+                          title="View linked action plans"
+                        >
+                          <ClipboardCheck className="h-3.5 w-3.5" />
+                          {plansFor(r.id).length}
+                        </button>
                       </TableCell>
                       <TableCell className="text-sm text-slate-600">
                         {r.target_date ? format(new Date(r.target_date), 'MMM d, yyyy') : '—'}
@@ -429,6 +464,50 @@ export default function RecommendationsPage() {
               Delete
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Linked action plans */}
+      <Dialog open={!!viewLinks} onOpenChange={(o) => !o && setViewLinks(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ClipboardCheck className="h-5 w-5 text-emerald-600" />
+              Action Plans
+            </DialogTitle>
+            <DialogDescription className="line-clamp-2">{viewLinks?.recommendation_text}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+            {viewLinks && plansFor(viewLinks.id).length === 0 ? (
+              <div className="text-center py-8 text-slate-500 text-sm border rounded-lg">
+                No action plans linked to this recommendation yet.
+                <p className="mt-1 text-xs">Create one on the Action Plans page and select this recommendation.</p>
+              </div>
+            ) : (
+              viewLinks &&
+              plansFor(viewLinks.id).map((p) => (
+                <div key={p.id} className="rounded-lg border p-3">
+                  <p className="text-sm font-medium line-clamp-2">{p.planned_action}</p>
+                  <div className="mt-2 flex items-center gap-3">
+                    <Badge className={apStatusColors[p.status] || 'bg-slate-100 text-slate-700'}>
+                      {p.status}
+                    </Badge>
+                    <div className="flex items-center gap-2 flex-1">
+                      <div className="h-2 flex-1 rounded-full bg-slate-100 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-blue-500"
+                          style={{ width: `${Math.min(100, p.progress_percentage || 0)}%` }}
+                        />
+                      </div>
+                      <span className="text-xs font-medium text-slate-600 w-9 text-right">
+                        {p.progress_percentage || 0}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </>
