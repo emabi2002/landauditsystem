@@ -278,17 +278,23 @@ export interface Database {
         Relationships: []
       }
       audit_findings: {
+        // Real live columns (database.types was previously stale: the title column
+        // is `title` not `finding_title`, and the condition column is
+        // `condition_found` not `condition`; there is no `finding_number`).
         Row: {
           id: string
           engagement_id: string
-          finding_number: string | null
-          finding_title: string
-          condition: string | null
+          title: string
+          condition_found: string | null
           criteria: string | null
           cause: string | null
           effect: string | null
           risk_rating: string
           status: string
+          org_unit_id: string | null
+          risk_id: string | null
+          legal_instrument_id: string | null
+          created_by: string | null
           created_at: string
           updated_at: string
           [key: string]: any
@@ -298,15 +304,42 @@ export interface Database {
         Relationships: []
       }
       audit_recommendations: {
+        // Real live columns (no `recommendation_number` / `responsible_division_id`).
         Row: {
           id: string
           finding_id: string
-          recommendation_number: string | null
           recommendation_text: string
           priority: string
-          responsible_division_id: string | null
           target_date: string | null
           status: string
+          region_code: string | null
+          kra_activity_id: string | null
+          legal_case_linked: boolean | null
+          legal_case_id: string | null
+          risk_id: string | null
+          published_at: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+          [key: string]: any
+        }
+        Insert: Writable
+        Update: Writable
+        Relationships: []
+      }
+      audit_action_plans: {
+        // Implementation tracking for a recommendation. Owner references `people`.
+        Row: {
+          id: string
+          recommendation_id: string
+          action_owner_id: string | null
+          planned_action: string
+          progress_percentage: number
+          actual_completion_date: string | null
+          notes: string | null
+          evidence_url: string | null
+          status: string
+          risk_id: string | null
           created_at: string
           updated_at: string
           [key: string]: any

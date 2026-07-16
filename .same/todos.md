@@ -389,3 +389,44 @@ Found a SYSTEMIC RLS gap + dialog/FK bugs; verified via authenticated vs service
       divisions 10, legal instruments 13, create risk + legal ref works, DB computes
       residual rating, status update works. Risk Events reads 17 (was 0), categories 7,
       create risk event (RE-2026-008) works. Both modules functional after login.
+
+## FINAL RLS sweep + remaining modules (Engagements/Fieldwork/Findings/Recs/Action Plans)
+- [x] RLS SWEEP (read + write probe across all 41 tables, authenticated): ALL CLEAR.
+      Every table svc==auth on reads; every write-probe passed (insert {} returns a
+      data-constraint error, NOT 42501). Migrations 013/016/017 fully closed the gaps.
+      No remaining table blocks authenticated read OR write.
+- [x] Engagements: REAL (useEngagements). Read 11, create + update verified (auth).
+- [x] Fieldwork: REAL via /api/workpapers (service-role). GET 200 (0 rows).
+- [x] FINDING: Findings, Recommendations, Action Plans PAGES render HARDCODED mock
+      arrays (const findings/recommendations/actionPlans = [...]); they do NOT use the
+      DB. useFindings/useRecommendations hooks exist but are unused; DB has real data
+      (audit_findings=8, audit_recommendations=9). Action Plans has no DB table wired.
+- [x] NOTE: audit_findings real schema differs from database.types.ts (no `condition`
+      column) — relevant when wiring the Findings page to the DB. (RLS write is fine.)
+- [x] DONE: wired Findings + Recommendations + Action Plans to real Supabase CRUD.
+
+## Wire Findings / Recommendations / Action Plans to real data + full CRUD
+- [x] Discovered real live schemas (types were stale):
+      audit_findings: title (not finding_title), condition_found NOT NULL (not
+        `condition`), + criteria/cause/effect/risk_rating/status/engagement_id.
+      audit_recommendations: finding_id/recommendation_text/priority/status/target_date
+        (no recommendation_number/responsible_division_id).
+      audit_action_plans ALREADY EXISTS (10 rows) — recommendation_id(FK NOT NULL),
+        action_owner_id(FK->people), planned_action, progress_percentage(0-100),
+        status, actual_completion_date, notes, evidence_url. NO migration needed.
+- [x] Probed CHECK values: findings.risk_rating {Low,Medium,High,Critical};
+      findings.status {Draft,Under Review,Closed}; rec.priority {Low,Medium,High,
+      Critical}; rec.status {Draft,In Progress,Accepted,Published}; action_plans.status
+      {Not Started,In Progress,Completed,Overdue}.
+- [x] Aligned database.types.ts: real audit_findings + audit_recommendations columns
+      + added audit_action_plans table type.
+- [x] Created useActionPlans hook (select/insert/update/delete on audit_action_plans).
+- [x] Rewrote findings/page.tsx: useFindings + engagement dropdown, stats, search,
+      create/edit/delete dialogs (Condition/Criteria/Cause/Effect structure).
+- [x] Rewrote recommendations/page.tsx: useRecommendations + finding dropdown, stats,
+      CRUD + one-click Publish (sets status=Published + published_at).
+- [x] Rewrote action-plans/page.tsx: useActionPlans + recommendation + owner(people)
+      dropdowns, progress bar, stats (in progress/completed/overdue/avg), CRUD.
+- [x] E2E (authenticated) chain PASSED: create finding(Critical/Under Review)->update
+      ->Closed; create rec(High/Draft)->publish; create action plan(50%/In Progress)->
+      update 100%/Completed; all cleaned up. tsc 0 errors; clean build; routes 200.
