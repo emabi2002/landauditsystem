@@ -430,3 +430,19 @@ Found a SYSTEMIC RLS gap + dialog/FK bugs; verified via authenticated vs service
 - [x] E2E (authenticated) chain PASSED: create finding(Critical/Under Review)->update
       ->Closed; create rec(High/Draft)->publish; create action plan(50%/In Progress)->
       update 100%/Completed; all cleaned up. tsc 0 errors; clean build; routes 200.
+
+## ACTIVE: Build the real Reports module (last mock page)
+
+Reports page was 100% static: hardcoded templates + dead buttons (Create Report,
+Export Data, View Analytics, Generate all did nothing). Dashboard is already real.
+
+- [x] Re-establish git repo (container reset wiped .git again) via authenticated gh CLI
+- [x] Create `src/lib/reports.ts`: report catalog + live Supabase data generators
+      (engagements, findings+recommendations, action plans, compliance, risk
+      register, PSAP scorecard, KRA workplan) + printable-table helper
+- [x] Rewrite `reports/page.tsx`: real analytics KPI cards + charts + report library
+      with working Preview / Export CSV / Print-to-PDF per report
+- [x] Verify tsc clean + rebuild + routes 200; version (v10); commit + push
+- [x] E2E verified every report query returns live rows (engagements 11, findings 8,
+      recommendations 9, action plans 9, risk register 22, PSAP 3, KRA status 36);
+      fixed a stale `engagement_number` column reference (not in live DB)
