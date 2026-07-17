@@ -19,6 +19,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Download,
   FileText,
@@ -33,6 +42,8 @@ import {
   Eye,
   Loader2,
   ClipboardCheck,
+  Filter,
+  RotateCcw,
 } from 'lucide-react'
 import {
   BarChart,
@@ -56,9 +67,11 @@ import {
   exportReportCSV,
   printReport,
   getReportDef,
+  summarizeFilters,
   type ReportId,
   type ReportResult,
   type ReportCategory,
+  type ReportFilters,
 } from '@/lib/reports'
 
 const categoryIcon: Record<ReportCategory, typeof Briefcase> = {
@@ -99,6 +112,7 @@ export default function ReportsPage() {
   const [result, setResult] = useState<ReportResult | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [busyId, setBusyId] = useState<ReportId | null>(null)
+  const [filters, setFilters] = useState<ReportFilters>({})
 
   useEffect(() => {
     loadAnalytics()
@@ -159,9 +173,10 @@ export default function ReportsPage() {
   const openPreview = async (id: ReportId) => {
     setActiveReport(id)
     setResult(null)
+    setFilters({})
     setPreviewLoading(true)
     try {
-      const res = await generateReport(id)
+      const res = await generateReport(id, {})
       setResult(res)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to generate report')
@@ -170,6 +185,39 @@ export default function ReportsPage() {
       setPreviewLoading(false)
     }
   }
+
+  // Re-run the active report whenever the user changes a filter.
+  const regenerate = async (nextFilters: ReportFilters) => {
+    if (!activeReport) return
+    setPreviewLoading(true)
+    try {
+      const res = await generateReport(activeReport, nextFilters)
+      setResult(res)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to generate report')
+    } finally {
+      setPreviewLoading(false)
+    }
+  }
+
+  const updateFilter = (key: string, value: string) => {
+    const next = { ...filters, [key]: value }
+    setFilters(next)
+    regenerate(next)
+  }
+
+  const setDateFilter = (which: 'from' | 'to', value: string) => {
+    const next = { ...filters, [which]: value || undefined }
+    setFilters(next)
+    regenerate(next)
+  }
+
+  const resetFilters = () => {
+    setFilters({})
+    regenerate({})
+  }
+
+  const hasActiveFilters = Object.entries(filters).some(([, v]) => v && v !== 'all')
 
   const runExport = async (id: ReportId) => {
     setBusyId(id)
@@ -402,74 +450,159 @@ export default function ReportsPage() {
             <DialogDescription>{activeDef?.description}</DialogDescription>
           </DialogHeader>
 
-          {previewLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
-            </div>
-          ) : result ? (
-            <>
-              <div className="flex items-center justify-between border-y border-slate-100 py-2 text-sm text-slate-500">
-                <span>
-                  <strong className="text-slate-900">{result.rows.length}</strong> record
-                  {result.rows.length === 1 ? '' : 's'}
-                </span>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      if (result.rows.length === 0) return toast.info('No records to export.')
-                      exportReportCSV(result)
-                      toast.success('Exported to CSV')
-                    }}
-                  >
-                    <Download className="mr-1.5 h-4 w-4" />
-                    Export CSV
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="bg-emerald-600 hover:bg-emerald-700"
-                    onClick={() => printReport(activeDef?.title || 'Report', result)}
-                  >
-                    <Printer className="mr-1.5 h-4 w-4" />
-                    Print / PDF
-                  </Button>
+          {/* Filter bar — scope the report before exporting */}
+          {activeDef && (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-slate-500">
+                  <Filter className="h-3.5 w-3.5" />
+                  Scope this report
                 </div>
-              </div>
-
-              <div className="overflow-auto">
-                {result.rows.length === 0 ? (
-                  <div className="py-16 text-center text-slate-500">
-                    <TrendingUp className="mx-auto mb-3 h-12 w-12 text-slate-300" />
-                    <p>No records available for this report yet.</p>
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-slate-50">
-                        {result.columns.map((c) => (
-                          <TableHead key={c} className="whitespace-nowrap font-semibold">
-                            {c}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {result.rows.map((row, i) => (
-                        <TableRow key={i} className="hover:bg-slate-50">
-                          {result.columns.map((c) => (
-                            <TableCell key={c} className="max-w-[280px] truncate align-top text-sm">
-                              {String(row[c] ?? '')}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                {hasActiveFilters && (
+                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={resetFilters}>
+                    <RotateCcw className="mr-1 h-3.5 w-3.5" />
+                    Reset
+                  </Button>
                 )}
               </div>
-            </>
-          ) : null}
+              <div className="flex flex-wrap items-end gap-3">
+                {activeDef.filters.date && (
+                  <>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-slate-600">{activeDef.filters.date.label} from</Label>
+                      <Input
+                        type="date"
+                        value={filters.from || ''}
+                        onChange={(e) => setDateFilter('from', e.target.value)}
+                        className="h-9 w-[150px] bg-white"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-slate-600">{activeDef.filters.date.label} to</Label>
+                      <Input
+                        type="date"
+                        value={filters.to || ''}
+                        onChange={(e) => setDateFilter('to', e.target.value)}
+                        className="h-9 w-[150px] bg-white"
+                      />
+                    </div>
+                  </>
+                )}
+                {activeDef.filters.selects.map((s) => (
+                  <div key={s.key} className="space-y-1">
+                    <Label className="text-xs text-slate-600">{s.label}</Label>
+                    <Select value={filters[s.key] || 'all'} onValueChange={(v) => updateFilter(s.key, v)}>
+                      <SelectTrigger className="h-9 w-[170px] bg-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All {s.label.toLowerCase()}</SelectItem>
+                        {s.options.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
+                {!activeDef.filters.date && activeDef.filters.selects.length === 0 && (
+                  <p className="text-sm text-slate-400">No filters available for this report.</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Count + export/print actions */}
+          <div className="flex items-center justify-between border-y border-slate-100 py-2 text-sm text-slate-500">
+            <span>
+              {previewLoading ? (
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Generating…
+                </span>
+              ) : (
+                <>
+                  <strong className="text-slate-900">{result?.rows.length ?? 0}</strong> record
+                  {(result?.rows.length ?? 0) === 1 ? '' : 's'}
+                  {hasActiveFilters && <span className="ml-1 text-emerald-600">(filtered)</span>}
+                </>
+              )}
+            </span>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={previewLoading || !result}
+                onClick={() => {
+                  if (!result || result.rows.length === 0) return toast.info('No records to export.')
+                  exportReportCSV(result)
+                  toast.success(
+                    `Exported ${result.rows.length} record${result.rows.length === 1 ? '' : 's'} to CSV`,
+                  )
+                }}
+              >
+                <Download className="mr-1.5 h-4 w-4" />
+                Export CSV
+              </Button>
+              <Button
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-700"
+                disabled={previewLoading || !result}
+                onClick={() =>
+                  result &&
+                  printReport(
+                    activeDef?.title || 'Report',
+                    result,
+                    activeReport ? summarizeFilters(activeReport, filters) : '',
+                  )
+                }
+              >
+                <Printer className="mr-1.5 h-4 w-4" />
+                Print / PDF
+              </Button>
+            </div>
+          </div>
+
+          {/* Result table */}
+          <div className="min-h-0 flex-1 overflow-auto">
+            {previewLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+              </div>
+            ) : !result || result.rows.length === 0 ? (
+              <div className="py-16 text-center text-slate-500">
+                <TrendingUp className="mx-auto mb-3 h-12 w-12 text-slate-300" />
+                <p>
+                  {hasActiveFilters
+                    ? 'No records match the selected filters.'
+                    : 'No records available for this report yet.'}
+                </p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50">
+                    {result.columns.map((c) => (
+                      <TableHead key={c} className="whitespace-nowrap font-semibold">
+                        {c}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {result.rows.map((row, i) => (
+                    <TableRow key={i} className="hover:bg-slate-50">
+                      {result.columns.map((c) => (
+                        <TableCell key={c} className="max-w-[280px] truncate align-top text-sm">
+                          {String(row[c] ?? '')}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </>

@@ -18,12 +18,36 @@ export type ReportId =
 
 export type ReportCategory = 'Audit Workflow' | 'Risk & Compliance' | 'Governance'
 
+export interface ReportSelectFilter {
+  /** Filter key used in the ReportFilters bag. */
+  key: string
+  /** Underlying DB column the value is matched against. */
+  column: string
+  label: string
+  options: { value: string; label: string }[]
+}
+
+export interface ReportDateFilter {
+  /** DB column the from/to range is applied to. */
+  column: string
+  /** Human label shown in the UI (e.g. "Created", "Assessed"). */
+  label: string
+}
+
+export interface ReportFilterSpec {
+  /** When present, the report supports a from/to date range. */
+  date?: ReportDateFilter
+  /** Dropdown filters (status, rating, quarter, ...). */
+  selects: ReportSelectFilter[]
+}
+
 export interface ReportDef {
   id: ReportId
   title: string
   description: string
   frequency: string
   category: ReportCategory
+  filters: ReportFilterSpec
 }
 
 export interface ReportResult {
@@ -35,6 +59,17 @@ export interface ReportResult {
   filename: string
 }
 
+/** Active filter values chosen by the user (undefined / 'all' = no filter). */
+export interface ReportFilters {
+  from?: string
+  to?: string
+  [key: string]: string | undefined
+}
+
+const opt = (values: string[]) => values.map((v) => ({ value: v, label: v }))
+const quarterOpts = [1, 2, 3, 4].map((q) => ({ value: String(q), label: `Q${q}` }))
+const yearOpts = ['2024', '2025', '2026', '2027'].map((y) => ({ value: y, label: y }))
+
 export const REPORTS: ReportDef[] = [
   {
     id: 'engagement-summary',
@@ -42,6 +77,17 @@ export const REPORTS: ReportDef[] = [
     description: 'Every audit engagement with status, timeline and linked findings.',
     frequency: 'Monthly',
     category: 'Audit Workflow',
+    filters: {
+      date: { column: 'created_at', label: 'Created' },
+      selects: [
+        {
+          key: 'status',
+          column: 'status',
+          label: 'Status',
+          options: opt(['Planning', 'Fieldwork', 'Reporting', 'Follow-up', 'Closed']),
+        },
+      ],
+    },
   },
   {
     id: 'findings-recommendations',
@@ -49,6 +95,23 @@ export const REPORTS: ReportDef[] = [
     description: 'All findings by risk rating with their recommendation counts.',
     frequency: 'Quarterly',
     category: 'Audit Workflow',
+    filters: {
+      date: { column: 'created_at', label: 'Raised' },
+      selects: [
+        {
+          key: 'risk_rating',
+          column: 'risk_rating',
+          label: 'Risk Rating',
+          options: opt(['Critical', 'High', 'Medium', 'Low']),
+        },
+        {
+          key: 'status',
+          column: 'status',
+          label: 'Status',
+          options: opt(['Draft', 'Under Review', 'Closed']),
+        },
+      ],
+    },
   },
   {
     id: 'action-plans',
@@ -56,6 +119,17 @@ export const REPORTS: ReportDef[] = [
     description: 'Implementation progress of every action plan against recommendations.',
     frequency: 'Weekly',
     category: 'Audit Workflow',
+    filters: {
+      date: { column: 'created_at', label: 'Created' },
+      selects: [
+        {
+          key: 'status',
+          column: 'status',
+          label: 'Status',
+          options: opt(['Not Started', 'In Progress', 'Completed', 'Overdue']),
+        },
+      ],
+    },
   },
   {
     id: 'compliance-register',
@@ -63,6 +137,10 @@ export const REPORTS: ReportDef[] = [
     description: 'Compliance obligations and the controls mitigating them.',
     frequency: 'Monthly',
     category: 'Risk & Compliance',
+    filters: {
+      date: { column: 'created_at', label: 'Created' },
+      selects: [],
+    },
   },
   {
     id: 'risk-register',
@@ -70,6 +148,23 @@ export const REPORTS: ReportDef[] = [
     description: 'Residual risk ratings and status across the enterprise register.',
     frequency: 'Monthly',
     category: 'Risk & Compliance',
+    filters: {
+      date: { column: 'identified_date', label: 'Identified' },
+      selects: [
+        {
+          key: 'residual_risk_rating',
+          column: 'residual_risk_rating',
+          label: 'Residual Rating',
+          options: opt(['Extreme', 'High', 'Medium', 'Low']),
+        },
+        {
+          key: 'risk_status',
+          column: 'risk_status',
+          label: 'Status',
+          options: opt(['Active', 'Under Review', 'Mitigated', 'Accepted', 'Closed', 'Escalated']),
+        },
+      ],
+    },
   },
   {
     id: 'psap-scorecard',
@@ -77,6 +172,19 @@ export const REPORTS: ReportDef[] = [
     description: 'Quarterly PSAP financial & governance assessment scores.',
     frequency: 'Quarterly',
     category: 'Governance',
+    filters: {
+      date: { column: 'assessment_date', label: 'Assessed' },
+      selects: [
+        { key: 'financial_year', column: 'financial_year', label: 'Financial Year', options: yearOpts },
+        { key: 'quarter', column: 'quarter', label: 'Quarter', options: quarterOpts },
+        {
+          key: 'overall_rating',
+          column: 'overall_rating',
+          label: 'Rating',
+          options: opt(['Excellent', 'Good', 'Fair', 'Poor']),
+        },
+      ],
+    },
   },
   {
     id: 'kra-workplan',
@@ -84,11 +192,40 @@ export const REPORTS: ReportDef[] = [
     description: 'Key Result Area activity status across financial years.',
     frequency: 'Quarterly',
     category: 'Governance',
+    filters: {
+      selects: [
+        { key: 'financial_year', column: 'financial_year', label: 'Financial Year', options: yearOpts },
+        { key: 'quarter', column: 'quarter', label: 'Quarter', options: quarterOpts },
+        {
+          key: 'status',
+          column: 'status',
+          label: 'Status',
+          options: opt(['Completed', 'Ongoing', 'Not Started', 'Delayed', 'Not Measurable']),
+        },
+      ],
+    },
   },
 ]
 
 export function getReportDef(id: ReportId): ReportDef | undefined {
   return REPORTS.find((r) => r.id === id)
+}
+
+/** Human-readable summary of the active filters (for the printed cover). */
+export function summarizeFilters(id: ReportId, filters?: ReportFilters): string {
+  const def = getReportDef(id)
+  if (!def || !filters) return ''
+  const parts: string[] = []
+  if (def.filters.date && (filters.from || filters.to)) {
+    parts.push(`${def.filters.date.label}: ${filters.from || '…'} → ${filters.to || '…'}`)
+  }
+  for (const s of def.filters.selects) {
+    const v = filters[s.key]
+    if (v && v !== 'all') {
+      parts.push(`${s.label}: ${s.options.find((o) => o.value === v)?.label || v}`)
+    }
+  }
+  return parts.join('   •   ')
 }
 
 // ---------------------------------------------------------------------------
@@ -115,18 +252,44 @@ async function lookupMap(
   return map
 }
 
+/** Exclusive upper bound = the day after `d` (works for date & timestamp cols). */
+function nextDay(d: string): string {
+  const dt = new Date(`${d}T00:00:00Z`)
+  dt.setUTCDate(dt.getUTCDate() + 1)
+  return dt.toISOString().slice(0, 10)
+}
+
+/** Apply a report's date-range + select filters to a Supabase query builder. */
+function applyFilters(query: any, spec: ReportFilterSpec, filters?: ReportFilters) {
+  if (!filters) return query
+  if (spec.date) {
+    if (filters.from) query = query.gte(spec.date.column, filters.from)
+    if (filters.to) query = query.lt(spec.date.column, nextDay(filters.to))
+  }
+  for (const s of spec.selects) {
+    const v = filters[s.key]
+    if (v && v !== 'all') query = query.eq(s.column, v)
+  }
+  return query
+}
+
+const specOf = (id: ReportId): ReportFilterSpec => getReportDef(id)!.filters
+
 // ---------------------------------------------------------------------------
 // Report generators (LIVE data)
 // ---------------------------------------------------------------------------
 
-async function engagementSummary(): Promise<ReportResult> {
+async function engagementSummary(filters?: ReportFilters): Promise<ReportResult> {
+  // NB: the live `audit_engagements` table has no `engagement_number` column
+  // (the generated types are stale), so we derive a reference from the id.
+  let engQuery = supabase
+    .from('audit_engagements')
+    .select('id, title, status, start_date, end_date, created_at')
+    .order('created_at', { ascending: false })
+  engQuery = applyFilters(engQuery, specOf('engagement-summary'), filters)
+
   const [{ data: engagements }, { data: findings }] = await Promise.all([
-    // NB: the live `audit_engagements` table has no `engagement_number` column
-    // (the generated types are stale), so we derive a reference from the id.
-    supabase
-      .from('audit_engagements')
-      .select('id, title, status, start_date, end_date, created_at')
-      .order('created_at', { ascending: false }),
+    engQuery,
     supabase.from('audit_findings').select('id, engagement_id'),
   ])
 
@@ -152,12 +315,15 @@ async function engagementSummary(): Promise<ReportResult> {
   }
 }
 
-async function findingsRecommendations(): Promise<ReportResult> {
+async function findingsRecommendations(filters?: ReportFilters): Promise<ReportResult> {
+  let fQuery = supabase
+    .from('audit_findings')
+    .select('id, title, risk_rating, status, engagement_id, created_at')
+    .order('created_at', { ascending: false })
+  fQuery = applyFilters(fQuery, specOf('findings-recommendations'), filters)
+
   const [{ data: findings }, { data: recs }, engagementMap] = await Promise.all([
-    supabase
-      .from('audit_findings')
-      .select('id, title, risk_rating, status, engagement_id, created_at')
-      .order('created_at', { ascending: false }),
+    fQuery,
     supabase.from('audit_recommendations').select('id, finding_id, status'),
     lookupMap('audit_engagements', 'title'),
   ])
@@ -187,12 +353,15 @@ async function findingsRecommendations(): Promise<ReportResult> {
   }
 }
 
-async function actionPlans(): Promise<ReportResult> {
+async function actionPlans(filters?: ReportFilters): Promise<ReportResult> {
+  let planQuery = supabase
+    .from('audit_action_plans')
+    .select('id, recommendation_id, action_owner_id, planned_action, progress_percentage, status, actual_completion_date, created_at')
+    .order('created_at', { ascending: false })
+  planQuery = applyFilters(planQuery, specOf('action-plans'), filters)
+
   const [{ data: plans }, recMap, peopleMap] = await Promise.all([
-    supabase
-      .from('audit_action_plans')
-      .select('id, recommendation_id, action_owner_id, planned_action, progress_percentage, status, actual_completion_date, created_at')
-      .order('created_at', { ascending: false }),
+    planQuery,
     lookupMap('audit_recommendations', 'recommendation_text'),
     lookupMap('people', 'full_name'),
   ])
@@ -213,12 +382,20 @@ async function actionPlans(): Promise<ReportResult> {
   }
 }
 
-async function complianceRegister(): Promise<ReportResult> {
+async function complianceRegister(filters?: ReportFilters): Promise<ReportResult> {
   const res = await fetch('/api/compliance', { cache: 'no-store' })
   const json = await res.json().catch(() => ({}))
-  const obligations: any[] = json.obligations || []
+  let obligations: any[] = json.obligations || []
   const controls: any[] = json.controls || []
   const orgUnits: any[] = json.orgUnits || []
+
+  // Compliance data comes from a server route, so the created-date range is
+  // applied client-side here (ISO timestamps compare correctly as strings).
+  if (filters?.from) obligations = obligations.filter((o) => (o.created_at || '') >= filters.from!)
+  if (filters?.to) {
+    const upper = nextDay(filters.to)
+    obligations = obligations.filter((o) => (o.created_at || '') < upper)
+  }
 
   const unitName: Record<string, string> = {}
   for (const u of orgUnits) unitName[u.id] = u.name
@@ -249,12 +426,15 @@ async function complianceRegister(): Promise<ReportResult> {
   }
 }
 
-async function riskRegister(): Promise<ReportResult> {
+async function riskRegister(filters?: ReportFilters): Promise<ReportResult> {
+  let riskQuery = supabase
+    .from('audit_risk_register')
+    .select('risk_code, risk_title, risk_category, residual_risk_rating, residual_risk_score, risk_status, division_id, identified_date')
+    .order('residual_risk_score', { ascending: false })
+  riskQuery = applyFilters(riskQuery, specOf('risk-register'), filters)
+
   const [{ data: risks }, divisionMap] = await Promise.all([
-    supabase
-      .from('audit_risk_register')
-      .select('risk_code, risk_title, risk_category, residual_risk_rating, residual_risk_score, risk_status, division_id')
-      .order('residual_risk_score', { ascending: false }),
+    riskQuery,
     lookupMap('audit_divisions', 'name'),
   ])
 
@@ -275,12 +455,15 @@ async function riskRegister(): Promise<ReportResult> {
   }
 }
 
-async function psapScorecard(): Promise<ReportResult> {
+async function psapScorecard(filters?: ReportFilters): Promise<ReportResult> {
+  let psapQuery = supabase
+    .from('audit_psap_assessments')
+    .select('org_unit_id, financial_year, quarter, overall_score, overall_rating, assessment_date, completed_by')
+    .order('assessment_date', { ascending: false })
+  psapQuery = applyFilters(psapQuery, specOf('psap-scorecard'), filters)
+
   const [{ data: assessments }, orgMap, peopleMap] = await Promise.all([
-    supabase
-      .from('audit_psap_assessments')
-      .select('org_unit_id, financial_year, quarter, overall_score, overall_rating, assessment_date, completed_by')
-      .order('assessment_date', { ascending: false }),
+    psapQuery,
     lookupMap('org_units', 'name'),
     lookupMap('people', 'full_name'),
   ])
@@ -302,12 +485,15 @@ async function psapScorecard(): Promise<ReportResult> {
   }
 }
 
-async function kraWorkplan(): Promise<ReportResult> {
+async function kraWorkplan(filters?: ReportFilters): Promise<ReportResult> {
+  let statusQuery = supabase
+    .from('audit_kra_activity_quarterly_status')
+    .select('kra_activity_id, financial_year, quarter, status, narrative_status')
+    .order('financial_year', { ascending: false })
+  statusQuery = applyFilters(statusQuery, specOf('kra-workplan'), filters)
+
   const [{ data: statuses }, activityRes, kraRes] = await Promise.all([
-    supabase
-      .from('audit_kra_activity_quarterly_status')
-      .select('kra_activity_id, financial_year, quarter, status, narrative_status')
-      .order('financial_year', { ascending: false }),
+    statusQuery,
     // Select all columns: the activity→KRA foreign key is named `strategic_kra_id`
     // in some environments and `kra_id` in others; selecting * avoids a 400 on a
     // missing column and we resolve whichever exists at runtime.
@@ -340,7 +526,7 @@ async function kraWorkplan(): Promise<ReportResult> {
   }
 }
 
-const GENERATORS: Record<ReportId, () => Promise<ReportResult>> = {
+const GENERATORS: Record<ReportId, (filters?: ReportFilters) => Promise<ReportResult>> = {
   'engagement-summary': engagementSummary,
   'findings-recommendations': findingsRecommendations,
   'action-plans': actionPlans,
@@ -350,10 +536,10 @@ const GENERATORS: Record<ReportId, () => Promise<ReportResult>> = {
   'kra-workplan': kraWorkplan,
 }
 
-export async function generateReport(id: ReportId): Promise<ReportResult> {
+export async function generateReport(id: ReportId, filters?: ReportFilters): Promise<ReportResult> {
   const gen = GENERATORS[id]
   if (!gen) throw new Error(`Unknown report: ${id}`)
-  return gen()
+  return gen(filters)
 }
 
 // ---------------------------------------------------------------------------
@@ -393,7 +579,7 @@ const PRINT_STYLES = `
 `
 
 /** Print a tabular report to PDF via a hidden iframe (safe in embedded previews). */
-export function printReport(title: string, result: ReportResult) {
+export function printReport(title: string, result: ReportResult, filterSummary?: string) {
   if (typeof document === 'undefined') return
 
   const iframe = document.createElement('iframe')
@@ -440,6 +626,7 @@ export function printReport(title: string, result: ReportResult) {
       <div class="meta">
         <span><strong>Records:</strong> ${result.rows.length}</span>
         <span><strong>Generated:</strong> ${esc(generated)}</span>
+        ${filterSummary ? `<span><strong>Filters:</strong> ${esc(filterSummary)}</span>` : ''}
       </div>
       ${tableHtml}
     </body></html>`)

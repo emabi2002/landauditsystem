@@ -446,3 +446,18 @@ Export Data, View Analytics, Generate all did nothing). Dashboard is already rea
 - [x] E2E verified every report query returns live rows (engagements 11, findings 8,
       recommendations 9, action plans 9, risk register 22, PSAP 3, KRA status 36);
       fixed a stale `engagement_number` column reference (not in live DB)
+
+### Reports: per-report date-range + status/rating filters (scope before export)
+- [x] reports.ts: added ReportFilterSpec (date range + typed select filters) to each
+      of the 7 reports; applyFilters() applies gte/lt date bounds + eq selects at the
+      query level (client-side for compliance which comes via the API route)
+- [x] Filter matrix: engagements(Created + status); findings(Raised + rating + status);
+      action plans(Created + status); compliance(Created); risk register(Identified +
+      residual rating + status); PSAP(Assessed + FY + quarter + rating);
+      KRA(FY + quarter + status)
+- [x] Preview dialog: live filter bar (date-from/to + dropdowns) that re-generates on
+      change, "(filtered)" count, Reset button; Export CSV + Print use the scoped
+      result; printed cover now lists the active filters (summarizeFilters)
+- [x] Verified filter columns exist + queries valid on live DB (identified_date OK;
+      string→numeric coercion for FY/quarter OK; combined filters return expected rows)
+- [x] tsc clean; rebuilt (/reports 10.4 kB); routes 200; version + push
